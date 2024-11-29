@@ -350,4 +350,119 @@ app.put('/api/updateUserToTask', async (req, res) => {
     }
 });
 
+// Create a new comment
+app.post('/api/addTaskcomment', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    const userId = await getUserIdFromToken(token);
+    if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
+    }
+    const { taskId, content } = req.body;
+
+    if (!content) {
+        return res.status(400).json({ message: 'Comment content is required' });
+    }
+
+    try {
+        const [result] = await pool.query(
+            'INSERT INTO task_comment (task_id, content, commented_by) VALUES (?, ?, ?)',
+            [taskId, content, userId]
+        );
+        const commentId = result.insertId;
+        res.status(201).json({ message: 'Comment created successfully', commentId });
+    } catch (error) {
+        console.error('Error creating comment:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+
+// Update a comment
+app.put('/api/updateTaskComment', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    const userId = await getUserIdFromToken(token);
+    if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
+    }
+    
+    const { taskId, commentId, content } = req.body;
+
+    if (!content) {
+        return res.status(400).json({ message: 'Comment content is required' });
+    }
+
+    try {
+        //Check if comment exists and belongs to this task.  Add authorization here if needed.
+        const [commentExists] = await pool.query(
+            'SELECT 1 FROM task_comment WHERE comment_id = ? AND task_id = ? AND commented_by = ?',
+            [commentId, taskId, userId]
+        );
+        if(commentExists.length === 0){
+            return res.status(404).json({ message: 'Comment not found for this task' });
+        }
+
+
+        await pool.query(
+            'UPDATE task_comment SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE comment_id = ?',
+            [content, commentId]
+        );
+        res.json({ message: 'Comment updated successfully' });
+    } catch (error) {
+        console.error('Error updating comment:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+// Delete a comment
+app.delete('/api/deleteTaskComment', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    const userId = await getUserIdFromToken(token);
+    if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
+    }
+    const { taskId, commentId} = req.body;
+
+    try {
+        //Check if comment exists and belongs to this task. Add authorization if needed.
+        const [commentExists] = await pool.query(
+            'SELECT 1 FROM task_comment WHERE comment_id = ? AND task_id = ?',
+            [commentId, taskId]
+        );
+        if(commentExists.length === 0){
+            return res.status(404).json({ message: 'Comment not found for this task' });
+        }
+
+        await pool.query('DELETE FROM task_comment WHERE comment_id = ?', [commentId]);
+        res.json({ message: 'Comment deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting comment:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+// Get all comments for a task
+app.get('/api/allTaskcomments', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    const userId = await getUserIdFromToken(token);
+    if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
+    }
+    const { taskId } = req.body;
+
+    try {
+        const [comments] = await pool.query(
+            'SELECT tc.*, u.first_name, u.last_name, u.email FROM task_comment tc JOIN user u ON tc.commented_by = u.user_id WHERE task_id = ?',
+            [taskId]
+        );
+        res.json({ comments });
+    } catch (error) {
+        console.error('Error getting comments:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
 module.exports = app;
