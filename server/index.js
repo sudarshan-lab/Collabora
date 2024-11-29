@@ -1,13 +1,21 @@
 
 const express = require('express');
-const authRouter = require('./auth');
-const teamRouter = require('./team-module');
+const cors = require('cors');
+const pool = require('./db'); 
+const authRouter = require('./routes/auth');
+const teamRouter = require('./routes/team-module');
 const app = express();
 const port = 3000;
 
+app.use(cors({
+  origin: 'http://localhost:5173', 
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], 
+  credentials: true 
+}));
 
-app.use(express.json()); //Needed to parse JSON from POST requests
-app.use('/auth', authRouter); // Mount the auth router
+
+app.use(express.json()); 
+app.use('/auth', authRouter); 
 app.use('/team', teamRouter);
 
 
