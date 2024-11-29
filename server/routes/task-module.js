@@ -40,31 +40,26 @@ app.post('/api/createTask', async (req, res) => {
             return res.status(400).json({ message: 'Task name and team ID are required' });
         }
 
-        const connection = await pool.getConnection();
-        await connection.beginTransaction();
-
         //Check if user belongs to the team
-        const [userInTeam] = await connection.query(
+        const [userInTeam] = await pool.query(
             'SELECT 1 FROM user_team WHERE user_id = ? AND team_id = ?',
             [userId, team_id]
         );
         if(userInTeam.length === 0){
-            await connection.rollback();
             return res.status(403).json({message: 'Forbidden: User not part of this team'});
         }
         //Check if parent task exists (optional)
         if (parent_task_id) {
-            const [parentTaskExists] = await connection.query(
+            const [parentTaskExists] = await pool.query(
                 'SELECT 1 FROM task WHERE task_id = ?',
                 [parent_task_id]
             );
             if (parentTaskExists.length === 0) {
-                await connection.rollback();
                 return res.status(400).json({ message: 'Parent task does not exist' });
             }
         }
 
-        const [result] = await connection.query(
+        const [result] = await pool.query(
             'INSERT INTO task (task_name, task_description, due_date, team_id) VALUES (?, ?, ?, ?)',
             [task_name, task_description, due_date, team_id]
         );
@@ -72,35 +67,32 @@ app.post('/api/createTask', async (req, res) => {
 
         // Add subtask relationship if parent_task_id is provided
         if (parent_task_id) {
-            await connection.query(
+            await pool.query(
                 'INSERT INTO sub_task (task_id, parent_task_id) VALUES (?, ?)',
                 [taskId, parent_task_id]
             );
         }
 
-        await connection.commit();
         res.status(201).json({ message: 'Task created successfully', taskId });
     } catch (error) {
-       // await connection.rollback();
         console.error('Error creating task:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     } finally {
-        //connection.release();
     }
 });
 
-// Get all tasks for a specific team
+// Get all tasks for a specific team with user details (simplified query)
 app.get('/api/alltasks/:teamId', async (req, res) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    const userId = await getUserIdFromToken(token, res);
+    const userId = await getUserIdFromToken(token); 
     if (!userId) {
-        return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' }); //Handle unauthorized access here
+        return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
     }
     const teamId = parseInt(req.params.teamId);
 
     try {
-        //Check if user belongs to the team
+        //Check if user belongs to the team (same as before)
         const [userInTeam] = await pool.query(
             'SELECT 1 FROM user_team WHERE user_id = ? AND team_id = ?',
             [userId, teamId]
@@ -109,10 +101,14 @@ app.get('/api/alltasks/:teamId', async (req, res) => {
             return res.status(403).json({message: 'Forbidden: User not part of this team'});
         }
 
-        const [tasks] = await pool.query(
-            'SELECT * FROM task WHERE team_id = ?',
-            [teamId]
-        );
+        const [tasks] = await pool.query(`
+            SELECT t.*, u.user_id, u.first_name, u.last_name, u.email 
+            FROM task t
+            LEFT JOIN user_task ut ON t.task_id = ut.task_id
+            LEFT JOIN user u ON u.user_id = ut.user_id
+            WHERE t.team_id = ?
+        `, [teamId]);
+
         res.json({ tasks });
     } catch (error) {
         console.error('Error getting tasks:', error);
@@ -239,53 +235,45 @@ app.post('/api/assignUserToTask', async (req, res) => {
     }
 
     try {
-        const connection = await pool.getConnection();
-        await connection.beginTransaction();
 
         // 1. Check if task exists
-        const [taskExists] = await connection.query(
+        const [taskExists] = await pool.query(
             'SELECT team_id FROM task WHERE task_id = ?',
             [taskId]
         );
         if (taskExists.length === 0) {
-            await connection.rollback();
             return res.status(404).json({ message: 'Task not found' });
         }
         const teamId = taskExists[0].team_id;
 
 
         // 2. Check if the assigning user belongs to the team
-        const [assignerInTeam] = await connection.query(
+        const [assignerInTeam] = await pool.query(
             'SELECT 1 FROM user_team WHERE user_id = ? AND team_id = ?',
             [userId, teamId]
         );
         if (assignerInTeam.length === 0) {
-            await connection.rollback();
             return res.status(403).json({ message: 'Forbidden: Assigning user not in the team' });
         }
 
 
         // 3. Check if user to assign belongs to the team
-        const [userToAssignInTeam] = await connection.query(
+        const [userToAssignInTeam] = await pool.query(
             'SELECT 1 FROM user_team WHERE user_id = ? AND team_id = ?',
             [user_id_to_assign, teamId]
         );
         if (userToAssignInTeam.length === 0) {
-            await connection.rollback();
             return res.status(403).json({ message: 'Forbidden: User to assign not in the team' });
         }
 
 
         // 4. Assign user to task (insert into user_task)
-        await connection.query(
+        await pool.query(
             'INSERT INTO user_task (user_id, task_id) VALUES (?, ?)',
             [user_id_to_assign, taskId]
         );
-
-        await connection.commit();
         res.json({ message: 'User assigned to task successfully' });
     } catch (error) {
-       // await connection.rollback();
         console.error('Error assigning user to task:', error);
         if (error.code === 'ER_DUP_ENTRY') {
             res.status(409).json({ message: 'User is already assigned to this task' });
@@ -293,7 +281,6 @@ app.post('/api/assignUserToTask', async (req, res) => {
             res.status(500).json({ message: 'Server error', error: error.message });
         }
     } finally {
-       // connection.release();
     }
 });
 
@@ -312,53 +299,47 @@ app.put('/api/updateUserToTask', async (req, res) => {
     }
 
     try {
-        const connection = await pool.getConnection();
-        await connection.beginTransaction();
 
         // 1. Check if task exists
-        const [taskExists] = await connection.query(
+        const [taskExists] = await pool.query(
             'SELECT team_id FROM task WHERE task_id = ?',
             [taskId]
         );
         if (taskExists.length === 0) {
-            await connection.rollback();
+            await pool.rollback();
             return res.status(404).json({ message: 'Task not found' });
         }
         const teamId = taskExists[0].team_id;
 
         // 2. Check if the updating user is in the team
-        const [updaterInTeam] = await connection.query(
+        const [updaterInTeam] = await pool.query(
             'SELECT 1 FROM user_team WHERE user_id = ? AND team_id = ?',
             [userId, teamId]
         );
         if (updaterInTeam.length === 0) {
-            await connection.rollback();
             return res.status(403).json({ message: 'Forbidden: Updating user not in the team' });
         }
 
          // 3. Check if user to assign belongs to the team
-        const [userToAssignInTeam] = await connection.query(
+        const [userToAssignInTeam] = await pool.query(
             'SELECT 1 FROM user_team WHERE user_id = ? AND team_id = ?',
             [user_id_to_assign, teamId]
         );
         if (userToAssignInTeam.length === 0) {
-            await connection.rollback();
             return res.status(403).json({ message: 'Forbidden: User to assign not in the team' });
         }
 
         // 4. Delete any existing assignment for this task (if one exists)
-        await connection.query('DELETE FROM user_task WHERE task_id = ?', [taskId]);
+        await pool.query('DELETE FROM user_task WHERE task_id = ?', [taskId]);
 
         // 5. Assign the new user
-        await connection.query(
+        await pool.query(
             'INSERT INTO user_task (user_id, task_id) VALUES (?, ?)',
             [user_id_to_assign, taskId]
         );
 
-        await connection.commit();
         res.json({ message: 'Task user updated successfully' });
     } catch (error) {
-       // await connection.rollback();
         console.error('Error updating task user:', error);
         if(error.code === 'ER_DUP_ENTRY'){
             res.status(409).json({ message: "User already assigned to task"});
@@ -366,7 +347,6 @@ app.put('/api/updateUserToTask', async (req, res) => {
             res.status(500).json({ message: 'Server error', error: error.message });
         }
     } finally {
-      //  connection.release();
     }
 });
 
