@@ -126,51 +126,7 @@ app.get('/api/user/teams', async (req, res) => {
     }
 });
 
-app.get('/teams/:teamId', async (req, res) => {
-    const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1];
-    const teamId = parseInt(req.params.teamId);
-    const userId = await getUserIdFromToken(token);
-    if (!userId) {
-        return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
-    }
 
-    if (isNaN(teamId) || teamId <= 0) {
-        return res.status(400).json({ message: 'Invalid teamId' });
-    }
-
-    try {
-        const [teamData] = await pool.query(
-            `SELECT 
-                t.*, 
-                JSON_ARRAYAGG(
-                    JSON_OBJECT(
-                        'userId', u.user_id,
-                        'firstName', u.first_name,
-                        'lastName', u.last_name,
-                        'email', u.email,
-                        'role', ut.role
-                    )
-                ) AS users
-             FROM team t 
-             JOIN user_team ut ON t.team_id = ut.team_id
-             JOIN user u ON ut.user_id = u.user_id
-             WHERE t.team_id = ?
-             GROUP BY t.team_id`,
-            [teamId]
-        );
-
-        if (teamData.length === 0) {
-            return res.status(404).json({ message: 'Team not found' });
-        }
-        const teamDetails = { ...teamData[0], users: teamData[0].users };
-        res.json({ team: teamDetails });
-
-    } catch (error) {
-        console.error('Error getting team:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
-    }
-});
 
 // Get all users for a given team ID
 app.get('/api/allUsersInTeam/:teamId', async (req, res) => {
@@ -341,5 +297,105 @@ app.delete('/api/removeUser', async (req, res) => {
        // connection.release();
     }
 });
+
+app.get('/api/teams/:teamId', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    const teamId = parseInt(req.params.teamId);
+
+    if (!token) {
+        return res.status(401).json({ message: 'Unauthorized: No token provided' });
+    }
+
+    if (isNaN(teamId) || teamId <= 0) {
+        return res.status(400).json({ message: 'Invalid team ID' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const userId = decoded.userId;
+
+        // Query to get team details
+        const [teamData] = await pool.query(
+            `SELECT t.team_id, t.team_name, t.team_description, t.created_at, ut.role
+             FROM team t 
+             JOIN user_team ut ON t.team_id = ut.team_id 
+             WHERE t.team_id = ? AND ut.user_id = ?`,
+            [teamId, userId]
+        );
+
+        if (teamData.length === 0) {
+            return res.status(404).json({ message: 'Team not found or user is not a member' });
+        }
+
+        // Query to get team members
+        const [teamMembers] = await pool.query(
+            `SELECT u.user_id, u.first_name, u.last_name, u.email, ut.role 
+             FROM user u
+             JOIN user_team ut ON u.user_id = ut.user_id
+             WHERE ut.team_id = ?`,
+            [teamId]
+        );
+
+        res.json({
+            team: teamData[0],
+            members: teamMembers,
+        });
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ message: 'Unauthorized: Token expired' });
+        } else if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ message: 'Unauthorized: Invalid token' });
+        }
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+
+app.put('/api/teams/:teamId', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    const teamId = parseInt(req.params.teamId);
+    const { team_name, team_description } = req.body;
+
+    if (!token) {
+        return res.status(401).json({ message: 'Unauthorized: No token provided' });
+    }
+
+    if (isNaN(teamId) || teamId <= 0) {
+        return res.status(400).json({ message: 'Invalid team ID' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const userId = decoded.userId;
+
+        // Check if the user is part of the team
+        const [team] = await pool.query(
+            `SELECT * FROM user_team WHERE team_id = ? AND user_id = ?`,
+            [teamId, userId]
+        );
+
+        if (team.length === 0) {
+            return res.status(403).json({ message: 'Access denied: Not a team member' });
+        }
+
+        // Update the team details
+        await pool.query(
+            `UPDATE team SET team_name = ?, team_description = ? WHERE team_id = ?`,
+            [team_name, team_description, teamId]
+        );
+
+        res.json({ message: 'Team details updated successfully' });
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ message: 'Unauthorized: Token expired' });
+        } else if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ message: 'Unauthorized: Invalid token' });
+        }
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
 
 module.exports = app;
