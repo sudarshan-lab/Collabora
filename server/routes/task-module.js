@@ -272,6 +272,10 @@ app.post('/api/assignUserToTask', async (req, res) => {
             'INSERT INTO user_task (user_id, task_id) VALUES (?, ?)',
             [user_id_to_assign, taskId]
         );
+        await pool.query(
+            'UPDATE task SET status = ? WHERE task_id = ?',
+            ['in-progress', taskId]
+        );
         res.json({ message: 'User assigned to task successfully' });
     } catch (error) {
         console.error('Error assigning user to task:', error);
@@ -336,6 +340,10 @@ app.put('/api/updateUserToTask', async (req, res) => {
         await pool.query(
             'INSERT INTO user_task (user_id, task_id) VALUES (?, ?)',
             [user_id_to_assign, taskId]
+        );
+        await pool.query(
+            'UPDATE task SET status = ? WHERE task_id = ?',
+            ['in-progress', taskId]
         );
 
         res.json({ message: 'Task user updated successfully' });
@@ -464,5 +472,171 @@ app.get('/api/allTaskcomments', async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
+
+// Get task by ID with task details, subtasks, assigned users, and comments
+app.get('/api/task/:taskId', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    const userId = await getUserIdFromToken(token);
+
+    if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
+    }
+
+    const taskId = parseInt(req.params.taskId);
+
+    try {
+        // Check if the task exists
+        const [taskExists] = await pool.query(
+            `SELECT team_id FROM task WHERE task_id = ?`,
+            [taskId]
+        );
+
+        if (taskExists.length === 0) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        const teamId = taskExists[0].team_id;
+
+        // Check if the user is part of the team
+        const [userInTeam] = await pool.query(
+            `SELECT 1 FROM user_team WHERE user_id = ? AND team_id = ?`,
+            [userId, teamId]
+        );
+
+        if (userInTeam.length === 0) {
+            return res.status(403).json({ message: 'Forbidden: User not part of this team' });
+        }
+
+        // Fetch task details with assigned user details
+        const [taskDetails] = await pool.query(
+            `
+            SELECT 
+                t.*, 
+                u.user_id, 
+                u.first_name, 
+                u.last_name, 
+                u.email 
+            FROM 
+                task t
+            LEFT JOIN 
+                user_task ut 
+            ON 
+                t.task_id = ut.task_id
+            LEFT JOIN 
+                user u 
+            ON 
+                ut.user_id = u.user_id
+            WHERE 
+                t.task_id = ?
+            `,
+            [taskId]
+        );
+
+        if (taskDetails.length === 0) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        // Fetch subtasks with their details and assigned users
+        const [subTasks] = await pool.query(
+            `
+            SELECT 
+                st.task_id AS sub_task_id, 
+                t.*, 
+                u.user_id, 
+                u.first_name, 
+                u.last_name, 
+                u.email 
+            FROM 
+                sub_task st
+            JOIN 
+                task t 
+            ON 
+                st.task_id = t.task_id
+            LEFT JOIN 
+                user_task ut 
+            ON 
+                t.task_id = ut.task_id
+            LEFT JOIN 
+                user u 
+            ON 
+                ut.user_id = u.user_id
+            WHERE 
+                st.parent_task_id = ?
+            `,
+            [taskId]
+        );
+
+        // Fetch comments for the main task
+        const [taskComments] = await pool.query(
+            `
+            SELECT 
+                tc.comment_id, 
+                tc.content, 
+                tc.commented_at, 
+                tc.updated_at, 
+                u.user_id, 
+                u.first_name, 
+                u.last_name, 
+                u.email 
+            FROM 
+                task_comment tc
+            LEFT JOIN 
+                user u 
+            ON 
+                tc.commented_by = u.user_id
+            WHERE 
+                tc.task_id = ?
+            `,
+            [taskId]
+        );
+
+        // Fetch comments for each subtask
+        const subTaskComments = {};
+        for (const subTask of subTasks) {
+            const [comments] = await pool.query(
+                `
+                SELECT 
+                    tc.comment_id, 
+                    tc.content, 
+                    tc.commented_at, 
+                    tc.updated_at, 
+                    u.user_id, 
+                    u.first_name, 
+                    u.last_name, 
+                    u.email 
+                FROM 
+                    task_comment tc
+                LEFT JOIN 
+                    user u 
+                ON 
+                    tc.commented_by = u.user_id
+                WHERE 
+                    tc.task_id = ?
+                `,
+                [subTask.sub_task_id]
+            );
+            subTaskComments[subTask.sub_task_id] = comments;
+        }
+
+        // Attach comments to subtasks
+        const subtasksWithComments = subTasks.map(subTask => ({
+            ...subTask,
+            comments: subTaskComments[subTask.sub_task_id] || [],
+        }));
+
+        res.json({
+            task: {
+                ...taskDetails[0],
+                comments: taskComments, // Main task comments
+            },
+            subtasks: subtasksWithComments, // Subtasks with comments
+        });
+    } catch (error) {
+        console.error('Error fetching task details:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
 
 module.exports = app;

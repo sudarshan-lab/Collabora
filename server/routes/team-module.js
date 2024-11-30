@@ -40,42 +40,52 @@ app.post('/api/createTeam', async (req, res) => {
 
         const { team_name, team_description } = req.body;
 
-        const connection = await pool.getConnection();
-        try {
-            await connection.beginTransaction();
+        // Create the team
+        const [teamResults] = await pool.query(
+            'INSERT INTO team (team_name, team_description) VALUES (?, ?)',
+            [team_name, team_description]
+        );
+        const teamId = teamResults.insertId;
 
-            const [teamResults] = await connection.query(
-                'INSERT INTO team (team_name, team_description) VALUES (?, ?)',
-                [team_name, team_description]
-            );
-            const teamId = teamResults.insertId;
+        // Assign the admin role to the user for the created team
+        await pool.query(
+            'INSERT INTO user_team (user_id, team_id, role) VALUES (?, ?, ?)',
+            [userId, teamId, 'admin']
+        );
 
-            await connection.query(
-                'INSERT INTO user_team (user_id, team_id, role) VALUES (?, ?, ?)',
-                [userId, teamId, 'admin']
-            );
+        // Fetch the newly created team details
+        const [createdTeamDetails] = await pool.query(
+            `
+            SELECT 
+                t.*, 
+                ut.role, 
+                (SELECT COUNT(*) FROM user_team WHERE team_id = t.team_id) AS member_count
+            FROM 
+                team t 
+            JOIN 
+                user_team ut 
+            ON 
+                t.team_id = ut.team_id 
+            WHERE 
+                t.team_id = ?
+            `,
+            [teamId]
+        );
 
-            await connection.commit();
-            res.status(201).json({ message: 'Team created successfully', teamId });
-        } catch (error) {
-            await connection.rollback();
-            if (error.code === 'ER_DUP_ENTRY') {
-                res.status(409).json({ message: 'Team name already exists' });
-            } else {
-                res.status(500).json({ message: 'Failed to create team', error: error.message });
-            }
-        } finally {
-            connection.release();
-        }
+        res.status(201).json({ message: 'Team created successfully', team: createdTeamDetails[0] });
     } catch (error) {
-        if (error.name === 'TokenExpiredError') {
-            return res.status(401).json({ message: 'Unauthorized: Token expired' });
+        if (error.code === 'ER_DUP_ENTRY') {
+            res.status(409).json({ message: 'Team name already exists' });
+        } else if (error.name === 'TokenExpiredError') {
+            res.status(401).json({ message: 'Unauthorized: Token expired' });
         } else if (error.name === 'JsonWebTokenError') {
-            return res.status(401).json({ message: 'Unauthorized: Invalid token' });
+            res.status(401).json({ message: 'Unauthorized: Invalid token' });
+        } else {
+            res.status(500).json({ message: 'Server error', error: error.message });
         }
-        res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
+
 
 app.get('/api/user/teams', async (req, res) => {
     const authHeader = req.headers['authorization'];
@@ -174,129 +184,132 @@ app.get('/api/allUsersInTeam/:teamId', async (req, res) => {
 });
 
 // Add a user to a team
-app.post('/api/addNewUser', async (req, res) => {
+app.post('/api/teams/:teamId/add-members', async (req, res) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    const userId = await getUserIdFromToken(token);
-    if (!userId) {
-        return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
-    }
-    
-    const { teamId, userEmail } = req.body; // Get user's email from the request body
+    const { teamId } = req.params;
+    const { emails } = req.body;
 
-    if (!userEmail) {
-        return res.status(400).json({ message: 'User email is required' });
+    if (!token) {
+        return res.status(401).json({ message: 'Unauthorized: No token provided' });
+    }
+
+    if (!Array.isArray(emails) || emails.length === 0) {
+        return res.status(400).json({ message: 'Invalid email list provided' });
     }
 
     try {
-        const connection = await pool.getConnection();
-        await connection.beginTransaction();
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const userId = decoded.userId;
 
-        // 1. Check if team exists
-        const [teamExists] = await connection.query('SELECT 1 FROM team WHERE team_id = ?', [teamId]);
-        if (teamExists.length === 0) {
-            await connection.rollback();
-            return res.status(404).json({ message: 'Team not found' });
-        }
-
-        // 2. Check if the adding user is in the team
-        const [adderInTeam] = await connection.query(
-            'SELECT 1 FROM user_team WHERE user_id = ? AND team_id = ?',
-            [userId, teamId]
-        );
-        if (adderInTeam.length === 0) {
-            await connection.rollback();
-            return res.status(403).json({ message: 'Forbidden: Adding user not in the team' });
-        }
-
-        // 3. Find the user to add by email
-        const [userToAdd] = await connection.query('SELECT user_id FROM user WHERE email = ?', [userEmail]);
-        if (userToAdd.length === 0) {
-            await connection.rollback();
-            return res.status(404).json({ message: `User with email ${userEmail} not found` });
-        }
-
-        // 4. Check if user is already in the team
-        const [userAlreadyInTeam] = await connection.query(
-            'SELECT 1 FROM user_team WHERE user_id = ? AND team_id = ?',
-            [userToAdd[0].user_id, teamId]
-        );
-        if (userAlreadyInTeam.length > 0) {
-            await connection.rollback();
-            return res.status(409).json({ message: `User already in team` });
-        }
-
-        // 5. Add the user to the team
-        await connection.query(
-            'INSERT INTO user_team (user_id, team_id, role) VALUES (?, ?, ?)',
-            [userToAdd[0].user_id, teamId, 'member']
+        // Verify that the user is an admin of the team
+        const [teamAdmin] = await pool.query(
+            `SELECT role FROM user_team WHERE team_id = ? AND user_id = ?`,
+            [teamId, userId]
         );
 
-        await connection.commit();
-        res.json({ message: 'User added to team successfully' });
+        if (!teamAdmin.length || teamAdmin[0].role !== 'admin') {
+            return res.status(403).json({ message: 'Only admins can add members to the team' });
+        }
+
+        // Fetch user IDs for the provided emails
+        const [existingUsers] = await pool.query(
+            `SELECT user_id, email, first_name, last_name FROM user WHERE email IN (?)`,
+            [emails]
+        );
+
+        if (existingUsers.length === 0) {
+            return res.status(404).json({ message: 'No users found for the provided emails' });
+        }
+
+        // Add each user to the team if not already a member
+        const addUserPromises = existingUsers.map((user) =>
+            pool.query(
+                `INSERT IGNORE INTO user_team (user_id, team_id, role) VALUES (?, ?, ?)`,
+                [user.user_id, teamId, 'member']
+            )
+        );
+        await Promise.all(addUserPromises);
+
+        // Fetch all team members after adding
+        const [teamMembers] = await pool.query(
+            `SELECT u.user_id, u.first_name, u.last_name, u.email, ut.role
+             FROM user_team ut
+             JOIN user u ON ut.user_id = u.user_id
+             WHERE ut.team_id = ?`,
+            [teamId]
+        );
+
+        res.json({ members: teamMembers });
     } catch (error) {
-       // await connection.rollback();
-        console.error('Error adding user to team:', error);
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ message: 'Unauthorized: Token expired' });
+        } else if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ message: 'Unauthorized: Invalid token' });
+        }
+        console.error('Error adding members:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
-    } finally {
-       // connection.release();
     }
 });
 
-app.delete('/api/removeUser', async (req, res) => {
+
+
+app.delete('/api/teams/:teamId/remove-member', async (req, res) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    const userId = await getUserIdFromToken(token);
+    const { teamId } = req.params;
+    const { userId } = req.body;
+  
+    if (!token) {
+      return res.status(401).json({ message: 'Unauthorized: No token provided' });
+    }
+  
     if (!userId) {
-        return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
+      return res.status(400).json({ message: 'Invalid user ID provided' });
     }
-    const { teamId, userIdToRemove } = req.body; //Get userId from request body
-
-    if (!userIdToRemove) {
-        return res.status(400).json({ message: 'User ID to remove is required' });
-    }
-
+  
     try {
-        const connection = await pool.getConnection();
-        await connection.beginTransaction();
-
-        // 1. Check if team exists (same as addUser)
-        const [teamExists] = await connection.query('SELECT 1 FROM team WHERE team_id = ?', [teamId]);
-        if (teamExists.length === 0) {
-            await connection.rollback();
-            return res.status(404).json({ message: 'Team not found' });
-        }
-
-        // 2. Check if removing user is in the team
-        const [removerInTeam] = await connection.query(
-            'SELECT 1 FROM user_team WHERE user_id = ? AND team_id = ?',
-            [userId, teamId]
-        );
-        if (removerInTeam.length === 0) {
-            await connection.rollback();
-            return res.status(403).json({ message: 'Forbidden: Removing user not in the team' });
-        }
-
-        // 3. Remove the user from the team
-        const [rowsAffected] = await connection.query(
-            'DELETE FROM user_team WHERE user_id = ? AND team_id = ?',
-            [userIdToRemove, teamId]
-        );
-        if (rowsAffected.affectedRows === 0) {
-            await connection.rollback();
-            return res.status(404).json({ message: `User not found in this team` });
-        }
-
-        await connection.commit();
-        res.json({ message: 'User removed from team successfully' });
+      const decoded = jwt.verify(token, JWT_SECRET);
+      const requestingUserId = decoded.userId;
+  
+      // Verify that the requesting user is an admin of the team
+      const [teamAdmin] = await pool.query(
+        `SELECT role FROM user_team WHERE team_id = ? AND user_id = ?`,
+        [teamId, requestingUserId]
+      );
+  
+      if (!teamAdmin.length || teamAdmin[0].role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can remove members from the team' });
+      }
+  
+      // Check if the user being removed is a member of the team
+      const [existingMember] = await pool.query(
+        `SELECT * FROM user_team WHERE team_id = ? AND user_id = ?`,
+        [teamId, userId]
+      );
+  
+      if (!existingMember.length) {
+        return res.status(404).json({ message: 'User is not a member of the team' });
+      }
+  
+      // Remove the user from the team
+      await pool.query(
+        `DELETE FROM user_team WHERE team_id = ? AND user_id = ?`,
+        [teamId, userId]
+      );
+  
+      res.json({ message: 'Member removed successfully', userId });
     } catch (error) {
-       // await connection.rollback();
-        console.error('Error removing user from team:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
-    } finally {
-       // connection.release();
+      if (error.name === 'TokenExpiredError') {
+        return res.status(401).json({ message: 'Unauthorized: Token expired' });
+      } else if (error.name === 'JsonWebTokenError') {
+        return res.status(401).json({ message: 'Unauthorized: Invalid token' });
+      }
+      console.error('Error removing member:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
     }
-});
+  });
+  
 
 app.get('/api/teams/:teamId', async (req, res) => {
     const authHeader = req.headers['authorization'];
@@ -396,6 +409,103 @@ app.put('/api/teams/:teamId', async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
+
+app.put('/api/teams/:teamId/update-role', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    const { teamId } = req.params;
+    const { userId, role } = req.body;
+  
+    if (!token) {
+      return res.status(401).json({ message: 'Unauthorized: No token provided' });
+    }
+  
+    if (!userId || !role || (role !== 'admin' && role !== 'member')) {
+      return res.status(400).json({ message: 'Invalid user ID or role provided' });
+    }
+  
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      const requestingUserId = decoded.userId;
+  
+      // Verify that the requesting user is an admin of the team
+      const [teamAdmin] = await pool.query(
+        `SELECT role FROM user_team WHERE team_id = ? AND user_id = ?`,
+        [teamId, requestingUserId]
+      );
+  
+      if (!teamAdmin.length || teamAdmin[0].role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can update member roles' });
+      }
+  
+      // Check if the user being updated is a member of the team
+      const [existingMember] = await pool.query(
+        `SELECT * FROM user_team WHERE team_id = ? AND user_id = ?`,
+        [teamId, userId]
+      );
+  
+      if (!existingMember.length) {
+        return res.status(404).json({ message: 'User is not a member of the team' });
+      }
+  
+      // Update the user's role
+      await pool.query(
+        `UPDATE user_team SET role = ? WHERE team_id = ? AND user_id = ?`,
+        [role, teamId, userId]
+      );
+  
+      res.json({ message: 'Member role updated successfully', userId, role });
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        return res.status(401).json({ message: 'Unauthorized: Token expired' });
+      } else if (error.name === 'JsonWebTokenError') {
+        return res.status(401).json({ message: 'Unauthorized: Invalid token' });
+      }
+      console.error('Error updating member role:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
+    }
+  });
+
+  app.delete('/api/teams/:teamId', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    const { teamId } = req.params;
+
+    if (!token) {
+        return res.status(401).json({ message: 'Unauthorized: No token provided' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const userId = decoded.userId;
+
+        // Verify the user is an admin of the team
+        const [teamAdmin] = await pool.query(
+            `SELECT role FROM user_team WHERE team_id = ? AND user_id = ?`,
+            [teamId, userId]
+        );
+
+        if (!teamAdmin.length || teamAdmin[0].role !== 'admin') {
+            return res.status(403).json({ message: 'Only admins can remove teams.' });
+        }
+
+        // Delete the team and associated records
+        await pool.query(`DELETE FROM user_team WHERE team_id = ?`, [teamId]);
+        await pool.query(`DELETE FROM team WHERE team_id = ?`, [teamId]);
+
+        res.json({ message: 'Team removed successfully', teamId });
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ message: 'Unauthorized: Token expired' });
+        } else if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ message: 'Unauthorized: Invalid token' });
+        }
+        console.error('Error removing team:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+  
 
 
 module.exports = app;
