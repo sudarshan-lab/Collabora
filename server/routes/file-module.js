@@ -97,7 +97,7 @@ app.post('/api/uploadFile/:teamId', upload.single('file'), async (req, res) => {
             );
 
         // Create notifications for team members
-        const [teamMembers] = await pool.query('SELECT user_id FROM user_team WHERE team_id = ?', [teamId]);
+        const [teamMembers] = await pool.query('SELECT user_id FROM user_team WHERE team_id = ? AND user_id != ?', [teamId, userId]);
         if (teamMembers.length != 0) {
             const recipientUserIds = teamMembers.map(member => member.user_id);
 
