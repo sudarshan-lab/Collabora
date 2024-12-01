@@ -10,7 +10,7 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET;
 const gcsBucketName = process.env.GCS_BUCKET_NAME; //Your GCS bucket name
 const storage = new Storage();
-const fs = require('node:fs');
+const fs = require('fs');
 
 // Configure multer for in-memory storage
 const upload = multer({
