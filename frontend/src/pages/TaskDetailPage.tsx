@@ -7,11 +7,17 @@ import { SubTaskCard } from '../components/tasks/SubTaskCard';
 import { CommentList } from '../components/comments/CommentList';
 import { TaskDetailSidebar } from '../components/tasks/TaskDetailSidebar';
 import { Task, Comment } from '../types/task';
+import { Pencil, Trash, X } from 'lucide-react';
+
 import {
+  addTaskComment,
   assignUserToTask,
   createTask,
+  deleteTask,
+  deleteTaskComment,
   fetchTaskById,
   updateTaskDueDate,
+  updateTaskNameAndDescription,
   updateTaskStatus,
   updateTaskUser,
   //createSubTask, // Add this service function for creating a sub-task
@@ -30,6 +36,17 @@ export function TaskDetailPage() {
   const [subTaskDueDate, setSubTaskDueDate] = useState('');
   const [isCreatingSubTask, setIsCreatingSubTask] = useState(false);
   const [subTask, setSubTask] = useState<Task | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [editTaskName, setEditTaskName] = useState('');
+  const [editTaskDescription, setEditTaskDescription] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isButtonEnabled, setIsButtonEnabled] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+
+
 
   const navigate = useNavigate();
 
@@ -42,6 +59,8 @@ export function TaskDetailPage() {
         const data = await fetchTaskById(token, taskId);
         setTask(data.task);
         setSubTask(data.subtasks);
+        setEditTaskName(data.task.task_name);
+        setEditTaskDescription(data.task.task_description);
       } catch (error) {
         console.error('Error fetching task:', error.message);
         navigate('/login');
@@ -53,22 +72,21 @@ export function TaskDetailPage() {
     fetchTask();
   }, [taskId, token]);
 
-  const handleSubTaskStatusChange = (subTaskId: number, newStatus: Task['status']) => {
-    if (!task) return;
+  useEffect(() => {
+    if (
+      editTaskName.trim() !== task?.task_name ||
+      editTaskDescription.trim() !== task?.task_description
+    ) {
+      setIsButtonEnabled(true);
+    } else {
+      setIsButtonEnabled(false);
+    }
+  }, [editTaskName, editTaskDescription, task]);
 
-    setTask({
-      ...task,
-      sub_tasks: task.sub_tasks?.map((subTask) =>
-        subTask.task_id === subTaskId
-          ? { ...subTask, status: newStatus }
-          : subTask
-      ),
-    });
-  };
 
   const handleAssignUser = async (taskId: number, userId: number) => {
     try {
-      setTask({ ...task, status: 'in-progress' });
+      setTask({ ...task, status: 'open' });
       if (task.user_id) {
         await updateTaskUser(taskId, userId);
       } else {
@@ -82,29 +100,22 @@ export function TaskDetailPage() {
     }
   };
 
-  const handleAddComment = (content: string) => {
-    if (!task) return;
-
-    const newComment: Comment = {
-      id: Date.now(),
-      task_id: task.task_id,
-      user_id: 1,
-      content,
-      created_at: new Date().toISOString(),
-      user: {
-        id: 1,
-        name: 'Current User',
-        avatar: 'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?w=32&h=32&fit=crop&crop=faces',
-        email: 'current@example.com',
-        role: 'Developer',
-      },
-    };
-
-    setTask({
-      ...task,
-      comments: [...(task.comments || []), newComment],
-    });
+  const handleAddComment = async (content: string) => {
+    if (!task || !token) return;
+  
+    try {
+      const { comment } = await addTaskComment(token, task.task_id, content);
+      setTask({
+        ...task,
+        comments: [...(task.comments || []), comment],
+      });
+    } catch (error: any) {
+      console.error('Failed to add comment:', error.message);
+      alert(error.message || 'Error adding comment. Please try again.');
+    }
   };
+  
+  
 
   const handleCreateSubTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,6 +179,45 @@ export function TaskDetailPage() {
     );
   }
 
+  const handleEditTask = async () => {
+    setIsSaving(true);
+    const token = sessionStorage.getItem('Token'); 
+    try {
+      await updateTaskNameAndDescription(task!.task_id, {
+        task_name: editTaskName,
+        task_description: editTaskDescription,
+      }, token);
+      setTask((prevTask) => ({
+        ...prevTask!,
+        task_name: editTaskName,
+        task_description: editTaskDescription,
+      }));
+      setShowEditForm(false);
+      setEditMode(false);
+    } catch (error) {
+      console.error('Failed to update task:', error.message);
+      alert(error.message || 'Error updating task. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  
+  const handleDeleteTask = async () => {
+    try {
+      setIsDeleting(true);
+      await deleteTask(task!.task_id, token);
+      navigate(`/team/${teamId}/tasks/`);
+    } catch (error) {
+      console.error('Failed to delete task:', error.message);
+      alert('Error deleting task. Please try again.');
+    }
+    finally{
+      setIsDeleting(false);
+    }
+  };
+  
+
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50">
@@ -195,16 +245,62 @@ export function TaskDetailPage() {
 
         <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3 space-y-6">
-            <motion.div
+          <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-lg shadow-sm p-6"
+              className="bg-white rounded-lg shadow-sm p-6 relative"
             >
               <h2 className="text-xl font-semibold mb-4">Description</h2>
+
+              {/* Toggle Between Pencil and Close Icons */}
+              <button
+                onClick={() => setEditMode(!editMode)}
+                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+                aria-label={editMode ? 'Close' : 'Edit'}
+              >
+                {editMode ? (
+                  <X className="w-4 h-4" /> // Close (X) Icon
+                ) : (
+                  <Pencil className="w-4 h-4" /> // Pencil Icon
+                )}
+              </button>
+
+              {/* Description */}
               <p className="text-gray-700 whitespace-pre-wrap">
                 {task.task_description}
               </p>
+
+              {/* Edit/Delete Icons with Tooltips */}
+              {editMode && (
+                <div className="flex justify-end gap-4 mt-4">
+                  <div className="relative group">
+                    <button
+                      onClick={() => setShowEditForm(true)}
+                      className="text-gray-600 hover:text-gray-700"
+                    >
+                      <Pencil className="w-4 h-4" /> {/* Edit Icon */}
+                    </button>
+                    <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 text-xs text-white bg-gray-700 rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      Edit Task
+                    </span>
+                  </div>
+
+                  <div className="relative group">
+                    <button
+                      onClick={() => setShowDeleteConfirmation(true)}
+                      className="text-gray-600 hover:text-gray-700"
+                    >
+                      <Trash className="w-4 h-4" /> {/* Delete Icon */}
+                    </button>
+                    <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 text-xs text-white bg-gray-700 rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      Delete Task
+                    </span>
+                  </div>
+                </div>
+              )}
             </motion.div>
+
+
 
             <div className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex gap-4 mb-6">
@@ -243,8 +339,6 @@ export function TaskDetailPage() {
                       <SubTaskCard
                         key={subTask.task_id}
                         subTask={subTask}
-                        onStatusChange={handleSubTaskStatusChange}
-                        onAssignUser={handleAssignUser}
                       />
                     ))}
                   </div>
@@ -253,7 +347,19 @@ export function TaskDetailPage() {
                 <CommentList
                   comments={task.comments || []}
                   onAddComment={handleAddComment}
+                  onDeleteComment={async (commentId) => {
+                    try {
+                      await deleteTaskComment(token, task.task_id, commentId);
+                      setTask((prevTask) => ({
+                        ...prevTask,
+                        comments: prevTask.comments?.filter((comment) => comment.comment_id !== commentId) || [],
+                      }));
+                    } catch (error) {
+                      alert('Failed to delete comment. Please try again.');
+                    }
+                  }}
                 />
+
               )}
             </div>
           </div>
@@ -356,6 +462,128 @@ export function TaskDetailPage() {
           </motion.div>
         )}
       </div>
+      {showEditForm && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.95 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0.95 }}
+            className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg"
+          >
+            <h2 className="text-lg font-semibold mb-4 text-center">Edit Task</h2>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleEditTask();
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-4">
+                  Task Name
+                </label>
+                <input
+                  type="text"
+                  value={editTaskName}
+                  onChange={(e) => setEditTaskName(e.target.value)}
+                  className="w-full rounded-md border-gray-300 px-3 py-2 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-4">
+                  Task Description
+                </label>
+                <textarea
+                  value={editTaskDescription}
+                  onChange={(e) => setEditTaskDescription(e.target.value)}
+                  className="w-full rounded-md border-gray-300 px-3 py-2 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  rows={4}
+                ></textarea>
+              </div>
+              <div className="flex justify-end gap-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEditForm(false)}
+                  className="px-4 py-2 text-sm bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                type="submit"
+                className={`px-4 py-2 text-sm rounded-md flex items-center gap-2 ${
+                  isButtonEnabled
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+                disabled={!isButtonEnabled || isSaving} // Disable if no changes or saving in progress
+              >
+                {isSaving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </button>
+              </div>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+      {showDeleteConfirmation && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.95 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0.95 }}
+            className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg"
+          >
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              Confirm Deletion
+            </h2>
+            <p className="text-sm text-gray-700 mb-6 text-center">
+              Are you sure you want to delete this task? All the subtasks associated will be deleted
+              and cannot be undone.
+            </p>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => setShowDeleteConfirmation(false)}
+                className="px-4 py-2 text-sm bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                disabled={isDeleting} 
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteTask}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
+                disabled={isDeleting} 
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Task'
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+
     </Layout>
   );
 }

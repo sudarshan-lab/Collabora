@@ -88,7 +88,14 @@ app.post('/api/uploadFile/:teamId', upload.single('file'), async (req, res) => {
                 'INSERT INTO file (filename, original_filename, file_extension, user_id, team_id, gcs_bucket, gcs_path, file_size, content_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [gcsFileName, req.file.originalname, fileExtension, userId, teamId, gcsBucketName, gcsFileName, req.file.size, req.file.mimetype]
             );
-            res.status(201).json({ message: 'File uploaded successfully', fileId: result.insertId });
+
+            // Fetch the recently uploaded file by ID
+            const [recentFile] = await pool.query(
+                'SELECT * FROM file WHERE file_id = ?',
+                [result.insertId]
+            );
+
+            res.status(201).json({ message: 'File uploaded successfully', file: recentFile[0] });
         });
 
         stream.end(req.file.buffer);
@@ -141,7 +148,6 @@ app.get('/api/allFiles/:teamId', async (req, res) => {
     }
 });
 
-//API to download a file
 app.get('/api/downloadFile/:fileId', async (req, res) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -149,7 +155,7 @@ app.get('/api/downloadFile/:fileId', async (req, res) => {
     if (!userId) return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
     
     const fileId = parseInt(req.params.fileId);
-    const { teamId } = req.body;
+    const teamId = parseInt(req.query.teamId); // Read teamId from query parameters
 
     try {
         //1. Check if file exists and user has access.
@@ -157,7 +163,7 @@ app.get('/api/downloadFile/:fileId', async (req, res) => {
             'SELECT * FROM file WHERE file_id = ? AND team_id = ?',
             [fileId, teamId]
         );
-        if(fileData.length === 0){
+        if (fileData.length === 0) {
             return res.status(404).json({ message: 'File not found for this team' });
         }
 
@@ -176,8 +182,9 @@ app.get('/api/downloadFile/:fileId', async (req, res) => {
         const [metadata] = await file.getMetadata();
         const contentType = metadata.contentType;
 
-        res.set('Content-Type', contentType); // Set the Content-Type header
-        res.set('Content-Disposition', `attachment; filename="${fileData[0].original_filename}"`); //Set filename for download
+        res.set('Content-Type', contentType); 
+        res.set('Content-Disposition', `attachment; filename="${fileData[0].original_filename}"`);
+        res.set('Access-Control-Expose-Headers', 'Content-Disposition');
 
         file.createReadStream()
             .on('error', err => {
@@ -191,6 +198,7 @@ app.get('/api/downloadFile/:fileId', async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
+
 
 
 // API to delete a file from the database and GCS bucket

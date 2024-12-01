@@ -320,4 +320,235 @@ export async function updateTaskStatus(taskId: number, status: string) {
     return response.json();
   }
   
+  export const updateTaskNameAndDescription = async (taskId, updates, token) => {
+    try {
+      const response = await axios.put(`${API_BASE_URL}/tasks/api/updateTask/${taskId}`, updates, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating task:', error.response?.data || error.message);
+      throw error.response?.data || { message: error.message };
+    }
+  };
+
+  export const deleteTask = async (taskId, token) => {
+    try {
+      const response = await axios.delete(`${API_BASE_URL}/tasks/api/deleteTask/${taskId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
   
+      if (response.status === 200) {
+        console.log('Task deleted successfully');
+      } else {
+        throw new Error('Unexpected response while deleting task');
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error.response?.data?.message || error.message);
+      throw new Error(error.response?.data?.message || 'Failed to delete the task');
+    }
+  };
+
+  export const addTaskComment = async (token: string, taskId: number, content: string) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/tasks/api/addTaskcomment`,
+        { taskId, content },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response.data; 
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to add comment');
+    }
+  };
+
+  export const deleteTaskComment = async (token: string, taskId: number, commentId: number) => {
+    try {
+      const response = await axios.delete(`${API_BASE_URL}/tasks/api/deleteTaskComment`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        data: {
+          taskId,
+          commentId,
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error deleting comment:', error.response?.data || error.message);
+      throw new Error(error.response?.data?.message || 'Failed to delete comment');
+    }
+  };
+
+  export const getAllDiscussions = async (token: string, teamId: number) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/discussion/api/allDiscussions/${teamId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data.discussions;
+    } catch (error: any) {
+      console.error('Error fetching discussions:', error.response?.data || error.message);
+      throw new Error(error.response?.data?.message || 'Failed to fetch discussions');
+    }
+  };
+
+  export const postDiscussion = async (
+    token: string,
+    teamId: number,
+    content: string,
+    parentPostId?: number
+  ) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/discussion/api/postDiscussion`,
+        { teamId, content, parentPostId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error('Error posting discussion:', error.response?.data || error.message);
+      throw new Error(error.response?.data?.message || 'Failed to post discussion');
+    }
+  };
+
+  export const updateDiscussion = async (
+    token: string,
+    teamId: number,
+    postId: number,
+    content: string
+  ): Promise<void> => {
+    try {
+      const response = await axios.put(
+        `${API_BASE_URL}/discussion/api/updateDiscussion`,
+        { teamId, postId, content },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+  
+      console.log('Discussion updated successfully:', response.data.message);
+    } catch (error: any) {
+      console.error('Error updating discussion:', error.response?.data || error.message);
+      throw new Error(error.response?.data?.message || 'Failed to update discussion');
+    }
+  };
+
+  export const deleteDiscussion = async (
+    token: string,
+    teamId: number,
+    postId: number
+  ): Promise<void> => {
+    try {
+      await axios.delete(`${API_BASE_URL}/discussion/api/deleteDiscussion`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        data: {
+          teamId,
+          postId,
+        },
+      });
+    } catch (error: any) {
+      console.error('Error deleting discussion:', error.response?.data || error.message);
+      throw new Error(error.response?.data?.message || 'Failed to delete discussion');
+    }
+  };
+
+
+  export const fetchFiles = async (token, teamId) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/files/api/allFiles/${teamId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data.files;
+    } catch (error) {
+      console.error('Error fetching files:', error.response?.data || error.message);
+      throw new Error(error.response?.data?.message || 'Failed to fetch files');
+    }
+  };
+
+  export const uploadFile = async (token, teamId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+  
+    try {
+      const response = await axios.post(`${API_BASE_URL}/files/api/uploadFile/${teamId}`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+  
+      return response.data;
+    } catch (error) {
+      console.error('Error uploading file:', error.response?.data || error.message);
+      throw new Error(error.response?.data?.message || 'Failed to upload file');
+    }
+  };
+
+  export const downloadFile = async (token, fileId, teamId) => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/files/api/downloadFile/${fileId}`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+            params: {
+                teamId, 
+            },
+            responseType: 'blob',
+        });
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+
+        const contentDisposition = response.headers['content-disposition'];
+        const fileName = contentDisposition
+            ? contentDisposition.split('filename=')[1]?.replace(/"/g, '') || 'downloaded-file'
+            : 'downloaded-file';
+
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        return fileName;
+    } catch (error) {
+        console.error('Error downloading file:', error.response?.data || error.message);
+        throw new Error(error.response?.data?.message || 'Failed to download file');
+    }
+};
+
+export const deleteFile = async (token, fileId, teamId) => {
+  try {
+    const response = await axios.delete(`${API_BASE_URL}/files/api/deleteFiles/${fileId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      data: { teamId }, 
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting file:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || 'Failed to delete file');
+  }
+};

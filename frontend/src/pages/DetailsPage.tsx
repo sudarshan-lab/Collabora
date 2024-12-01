@@ -190,7 +190,7 @@ const handleRemoveAdmin = async (userId) => {
   return (
     <Layout>
       <div className="container mx-6 p-6 max-w-4xl">
-        <div className="glass-morphism rounded-xl shadow-lg border border-white/20">
+        <div className="bg-white rounded-xl shadow-lg border border-white/20">
           <div className="p-6">
             {team && (
               <>
@@ -257,7 +257,7 @@ const handleRemoveAdmin = async (userId) => {
                   <motion.div
                       key={member.user_id}
                       className="bg-white shadow-sm p-4 rounded-lg flex justify-between items-center hover:shadow-md relative"
-                      whileHover={{ scale: 1.02 }}
+                      
                   >
                       <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">

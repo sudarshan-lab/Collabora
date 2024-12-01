@@ -16,14 +16,12 @@ export interface Team {
   members: string[];
 }
 
-export interface File {
+export interface FileItem {
   id: string;
   name: string;
-  type: string;
   size: string;
-  uploadedBy: string;
-  teamId: string;
-  createdAt: string;
+  type: string;
+  uploadedAt: Date;
 }
 
 export interface Activity {

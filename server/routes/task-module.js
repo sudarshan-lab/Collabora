@@ -81,7 +81,7 @@ app.post('/api/createTask', async (req, res) => {
     }
 });
 
-// Get all tasks for a specific team with user details (simplified query)
+// Get all parent tasks for a specific team
 app.get('/api/alltasks/:teamId', async (req, res) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -92,21 +92,23 @@ app.get('/api/alltasks/:teamId', async (req, res) => {
     const teamId = parseInt(req.params.teamId);
 
     try {
-        //Check if user belongs to the team (same as before)
+        // Check if user belongs to the team
         const [userInTeam] = await pool.query(
             'SELECT 1 FROM user_team WHERE user_id = ? AND team_id = ?',
             [userId, teamId]
         );
-        if(userInTeam.length === 0){
-            return res.status(403).json({message: 'Forbidden: User not part of this team'});
+        if (userInTeam.length === 0) {
+            return res.status(403).json({ message: 'Forbidden: User not part of this team' });
         }
 
+        // Query to fetch only parent tasks
         const [tasks] = await pool.query(`
             SELECT t.*, u.user_id, u.first_name, u.last_name, u.email 
             FROM task t
             LEFT JOIN user_task ut ON t.task_id = ut.task_id
             LEFT JOIN user u ON u.user_id = ut.user_id
-            WHERE t.team_id = ?
+            LEFT JOIN sub_task st ON t.task_id = st.task_id
+            WHERE t.team_id = ? AND st.parent_task_id IS NULL
         `, [teamId]);
 
         res.json({ tasks });
@@ -115,6 +117,7 @@ app.get('/api/alltasks/:teamId', async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
+
 
 
 //Update a task
@@ -179,18 +182,18 @@ app.put('/api/updateTask/:taskId', async (req, res) => {
     }
 });
 
-// Delete a task
+// Delete a task and its associated subtasks
 app.delete('/api/deleteTask/:taskId', async (req, res) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     const userId = await getUserIdFromToken(token, res);
     if (!userId) {
-        return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' }); //Handle unauthorized access here
+        return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
     }
     const taskId = parseInt(req.params.taskId);
 
     try {
-        //Check if task exists and user has access to delete
+        // Check if task exists and user has access to delete
         const [taskExists] = await pool.query(
             'SELECT team_id FROM task WHERE task_id = ?',
             [taskId]
@@ -202,22 +205,48 @@ app.delete('/api/deleteTask/:taskId', async (req, res) => {
 
         const teamId = taskExists[0].team_id;
 
-         //Check if user belongs to the team
+        // Check if user belongs to the team
         const [userInTeam] = await pool.query(
             'SELECT 1 FROM user_team WHERE user_id = ? AND team_id = ?',
             [userId, teamId]
         );
-        if(userInTeam.length === 0){
-            return res.status(403).json({message: 'Forbidden: User not part of this team'});
+        if (userInTeam.length === 0) {
+            return res.status(403).json({ message: 'Forbidden: User not part of this team' });
         }
 
-        await pool.query('DELETE FROM task WHERE task_id = ?', [taskId]);
-        res.json({ message: 'Task deleted successfully' });
+        // Function to recursively fetch all descendant task IDs
+        const fetchAllDescendantTaskIds = async (parentId) => {
+            const [subTasks] = await pool.query(
+                'SELECT task_id FROM sub_task WHERE parent_task_id = ?',
+                [parentId]
+            );
+            const descendantIds = [];
+            for (const subTask of subTasks) {
+                descendantIds.push(subTask.task_id);
+                const nestedDescendants = await fetchAllDescendantTaskIds(subTask.task_id);
+                descendantIds.push(...nestedDescendants);
+            }
+            return descendantIds;
+        };
+
+        // Fetch all descendant task IDs starting from the provided taskId
+        const allTaskIdsToDelete = await fetchAllDescendantTaskIds(taskId);
+        allTaskIdsToDelete.push(taskId); 
+
+        // Delete all tasks and subtasks
+        await pool.query(
+            'DELETE FROM task WHERE task_id IN (?)',
+            [allTaskIdsToDelete]
+        );
+
+        res.json({ message: 'Task and all associated subtasks deleted successfully' });
     } catch (error) {
-        console.error('Error deleting task:', error);
+        console.error('Error deleting task and subtasks:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
+
+
 
 // Assign user to task
 app.post('/api/assignUserToTask', async (req, res) => {
@@ -274,7 +303,7 @@ app.post('/api/assignUserToTask', async (req, res) => {
         );
         await pool.query(
             'UPDATE task SET status = ? WHERE task_id = ?',
-            ['in-progress', taskId]
+            ['open', taskId]
         );
         res.json({ message: 'User assigned to task successfully' });
     } catch (error) {
@@ -343,7 +372,7 @@ app.put('/api/updateUserToTask', async (req, res) => {
         );
         await pool.query(
             'UPDATE task SET status = ? WHERE task_id = ?',
-            ['in-progress', taskId]
+            ['open', taskId]
         );
 
         res.json({ message: 'Task user updated successfully' });
@@ -373,17 +402,41 @@ app.post('/api/addTaskcomment', async (req, res) => {
     }
 
     try {
+        // Insert the comment into the database
         const [result] = await pool.query(
             'INSERT INTO task_comment (task_id, content, commented_by) VALUES (?, ?, ?)',
             [taskId, content, userId]
         );
         const commentId = result.insertId;
-        res.status(201).json({ message: 'Comment created successfully', commentId });
+
+        // Fetch the newly created comment with the specified fields
+        const [comment] = await pool.query(
+            `SELECT 
+                tc.comment_id, 
+                tc.content, 
+                tc.commented_at, 
+                tc.updated_at, 
+                u.user_id, 
+                u.first_name, 
+                u.last_name, 
+                u.email 
+             FROM task_comment tc
+             JOIN user u ON tc.commented_by = u.user_id
+             WHERE tc.comment_id = ?`,
+            [commentId]
+        );
+
+        if (comment.length === 0) {
+            return res.status(404).json({ message: 'Failed to retrieve the created comment' });
+        }
+
+        res.status(201).json({ message: 'Comment created successfully', comment: comment[0] });
     } catch (error) {
         console.error('Error creating comment:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
+
 
 
 // Update a comment

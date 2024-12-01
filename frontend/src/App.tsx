@@ -4,7 +4,7 @@ import { TeamList } from './pages/TeamList';
 import { TeamDashboard } from './pages/TeamDashboard';
 import { TasksPage } from './pages/TasksPage';
 import { FilesPage } from './pages/FilesPage';
-import { DiscussionsPage } from './pages/DiscussionsPage';
+import { DiscussionPage } from './pages/DiscussionPage';
 import { ProfileSettings } from './components/settings/ProfileSettings';
 import { LoginPage } from './pages/login';
 import { SignupPage } from './pages/signup';
@@ -26,7 +26,7 @@ function App() {
         <Route path="/team/:teamId" element={<TeamDashboard />} />
         <Route path="/team/:teamId/tasks" element={<TasksPage />} />
         <Route path="/team/:teamId/files" element={<FilesPage />} />
-        <Route path="/team/:teamId/discussions" element={<DiscussionsPage />} />
+        <Route path="/team/:teamId/discussions" element={<DiscussionPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
         <Route path="/settings/profile" element={<ProfileSettings />} />
         <Route path="/team/:teamId/details" element={<DetailsPage />} />

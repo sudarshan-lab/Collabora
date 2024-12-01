@@ -14,7 +14,6 @@ export interface User {
     status: 'open' | 'in-progress' | 'completed';
     team_id: number;
     created_at: string;
-    assigned_to?: User;
     sub_tasks?: Task[];
     comments?: Comment[];
   }
@@ -26,5 +25,4 @@ export interface User {
     content: string;
     created_at: string;
     user: User;
-    replies?: Comment[];
   }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
-import { Plus } from 'lucide-react';
+import { Plus, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { createTask, fetchAllTasks } from '../components/service/service';
 
@@ -65,13 +65,13 @@ export function TasksPage() {
         team_id: teamId,
       };
 
-      const createdTask = await createTask(token, newTask); // Service call to create a task
+      await createTask(token, newTask); // Service call to create a task
 
-      setTasks([...tasks, createdTask]);
       setTaskName('');
       setTaskDescription('');
       setDueDate('');
       setShowTaskForm(false);
+      window.location.reload();
     } catch (error) {
       alert('Failed to create task. Please try again.');
     } finally {
@@ -79,13 +79,6 @@ export function TasksPage() {
     }
   };
 
-  const handleTaskStatusChange = (taskId, newStatus) => {
-    setTasks((prevTasks) =>
-      prevTasks.map((task) =>
-        task.task_id === taskId ? { ...task, status: newStatus } : task
-      )
-    );
-  };
 
   if (loadingTasks) {
     return (
@@ -129,6 +122,14 @@ export function TasksPage() {
             New Task
           </motion.button>
         </div>
+
+        {tasks.length === 0 && (
+                            <div className="col-span-full text-center py-12">
+                                <Users className="mx-auto h-12 w-12 text-gray-400" />
+                                <h3 className="mt-2 text-sm font-medium text-gray-900">No tasks</h3>
+                                <p className="mt-1 text-sm text-gray-500">Get started by creating a new task.</p>
+                            </div>
+                        )}
 
         <motion.div
           initial={{ opacity: 0 }}

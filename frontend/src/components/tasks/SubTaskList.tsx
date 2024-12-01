@@ -9,7 +9,6 @@ interface SubTaskListProps {
 }
 
 export function SubTaskList({ subTasks, onStatusChange }: SubTaskListProps) {
-    const availableUsers = JSON.parse(sessionStorage.getItem('TeamMembers')) || [];
   return (
     <motion.div
       initial={{ opacity: 0 }}

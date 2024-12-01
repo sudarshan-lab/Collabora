@@ -1,30 +1,52 @@
 import React from 'react';
 import { Bell, Menu, Search, User } from 'lucide-react';
-import { useTeamStore } from '../../store/teamStore';
 import { NotificationDropdown } from './NotificationDropdown';
 import { ProfileDropdown } from './ProfileDropdown';
+import { motion } from 'framer-motion';
 
 interface HeaderProps {
   onMenuClick: () => void;
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
-  const { currentTeam } = useTeamStore();
+
 
   return (
     <header className="bg-white border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <button 
-              onClick={onMenuClick}
-              className="p-2 rounded-md hover:bg-gray-100 lg:hidden"
+
+            <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ 
+              delay: 0.4,
+              duration: 0.6,
+              ease: "easeOut"
+            }}
+            className="relative z-20 flex items-center text-lg font-medium"
+          >
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm"
             >
-              <Menu className="h-6 w-6 text-gray-500" />
-            </button>
-            <h1 className="ml-4 text-xl font-semibold text-gray-900">
-              {currentTeam ? currentTeam.name : 'Collabora'}
-            </h1>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="mr-2 h-5 w-5"
+              >
+                <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
+              </svg>
+              Collabora
+            </motion.div>
+          </motion.div>
           </div>
           
           <div className="flex-1 max-w-xl px-4">

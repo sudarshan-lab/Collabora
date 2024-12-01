@@ -1,20 +1,38 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Calendar as CalendarIcon, Clock, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../ui/dropdown-menu';
-import { Calendar } from '../ui/calendar'; // Use the Calendar component
+import { Calendar } from '../ui/calendar'; 
+import { fetchTeamDetails } from '../service/service';
+import { useParams } from 'react-router-dom';
 
 interface TaskDetailSidebarProps {
   task: Task;
   onAssignUser: (userId: number) => void;
-  onUpdateDueDate: (newDueDate: Date) => void; // Callback to update the due date
+  onUpdateDueDate: (newDueDate: Date) => void; 
 }
 
 export function TaskDetailSidebar({ task, onAssignUser, onUpdateDueDate }: TaskDetailSidebarProps) {
-  const availableUsers = JSON.parse(sessionStorage.getItem('TeamMembers')) || [];
+  const [availableUsers, setAvailableUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showDatePicker, setShowDatePicker] = useState(false); // Toggle for calendar
+  const [showDatePicker, setShowDatePicker] = useState(false); 
+  const { teamId } = useParams();
+  const token = sessionStorage.getItem('Token');
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      try {
+        const teamData = await fetchTeamDetails(token, teamId);
+        setAvailableUsers(teamData.members);
+      } catch (error) {
+        console.error(error);
+      } 
+    };
+
+    fetchDetails();
+  }, [teamId, token]);
+
 
   const filteredUsers = availableUsers.filter(
     (user) =>
