@@ -50,5 +50,38 @@ app.get('/api/allnotifications', async (req, res) => {
     }
 });
 
+// API to update the read status of a notification
+app.put('/api/read/notification/:notificationId', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    const userId = await getUserIdFromToken(token);
+    if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
+    }
+    const notificationId = parseInt(req.params.notificationId);
+
+    try {
+        // Check if the notification exists and belongs to the user
+        const [notificationExists] = await pool.query(
+            'SELECT 1 FROM notification_recipients WHERE notification_id = ? AND user_id = ?',
+            [notificationId, userId]
+        );
+        if (notificationExists.length === 0) {
+            return res.status(404).json({ message: 'Notification not found for this user' });
+        }
+
+        // Update the read status
+        await pool.query(
+            'UPDATE notification_recipients SET read_status = TRUE WHERE notification_id = ? AND user_id = ?',
+            [notificationId, userId]
+        );
+
+        res.json({ message: 'Notification marked as read' });
+    } catch (error) {
+        console.error('Error updating notification read status:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
 
 module.exports = app;
