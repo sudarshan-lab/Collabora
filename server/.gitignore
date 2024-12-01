@@ -5,6 +5,7 @@
 
 .env
 .production.env
+gcpbucketkey.json
 
 npm-debug.log*
 yarn-debug.log*
