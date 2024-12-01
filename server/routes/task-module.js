@@ -3,6 +3,7 @@ const pool = require('../db');
 const jwt = require('jsonwebtoken');
 const app = express();
 app.use(express.json());
+const { createNotification } = require('./notifications'); // Import createNotification
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -73,6 +74,27 @@ app.post('/api/createTask', async (req, res) => {
             );
         }
 
+        // Fetch team members to send notifications to (excluding the task creator)
+        const [teamMembers] = await pool.query(
+            'SELECT user_id FROM user_team WHERE team_id = ? AND user_id != ?',
+            [team_id, userId]
+        );
+        if (teamMembers.length != 0) {
+            const recipientUserIds = teamMembers.map(member => member.user_id);
+
+            // Fetch team name
+            const [teamData] = await pool.query('SELECT team_name FROM team WHERE team_id = ?', [team_id]);
+            const teamName = teamData[0].team_name;
+
+            // Create the notification
+            await createNotification(
+                team_id,
+                'task_created',
+                `${task_name} task has been created in ${teamName}`, //Link to the created task
+                'link',
+                recipientUserIds //Send notification to all team members (except the creator)
+            );
+        }
         res.status(201).json({ message: 'Task created successfully', taskId });
     } catch (error) {
         console.error('Error creating task:', error);

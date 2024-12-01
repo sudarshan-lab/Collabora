@@ -11,6 +11,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const gcsBucketName = process.env.GCS_BUCKET_NAME; //Your GCS bucket name
 const storage = new Storage();
 const fs = require('fs');
+const createNotification = require('./notifications.js');
 
 // Configure multer for in-memory storage
 const upload = multer({
@@ -94,6 +95,24 @@ app.post('/api/uploadFile/:teamId', upload.single('file'), async (req, res) => {
                 'SELECT * FROM file WHERE file_id = ?',
                 [result.insertId]
             );
+
+        // Create notifications for team members
+        const [teamMembers] = await pool.query('SELECT user_id FROM user_team WHERE team_id = ?', [teamId]);
+        if (teamMembers.length != 0) {
+            const recipientUserIds = teamMembers.map(member => member.user_id);
+
+            // Fetch team name using teamId
+            const [teamData] = await pool.query('SELECT team_name FROM team WHERE team_id = ?', [teamId]);
+            const teamName = teamData[0].team_name; //Extract teamName
+
+            await createNotification(
+                teamId,
+                'file_upload',
+                `${req.file.originalname} uploaded to team ${teamName}`, 
+                `/teams/${teamId}/files/${result.insertId}`,
+                recipientUserIds
+            );
+        }
 
             res.status(201).json({ message: 'File uploaded successfully', file: recentFile[0] });
         });

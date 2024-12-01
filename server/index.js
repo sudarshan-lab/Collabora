@@ -7,6 +7,7 @@ const teamRouter = require('./routes/team-module');
 const taskRouter = require('./routes/task-module');
 const discussionRouter = require('./routes/discussion-module');
 const fileRouter = require('./routes/file-module');
+const notificationRouter = require('./routes/notificationRouter');
 const app = express();
 const port = 3000;
 
@@ -23,6 +24,7 @@ app.use('/team', teamRouter);
 app.use('/tasks', taskRouter);
 app.use('/discussion', discussionRouter);
 app.use('/files', fileRouter);
+app.use('/notifications', notificationRouter);
 
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);

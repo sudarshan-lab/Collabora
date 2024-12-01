@@ -3,6 +3,7 @@ const pool = require('../db');
 const jwt = require('jsonwebtoken');
 const app = express();
 app.use(express.json());
+const { createNotification } = require('./notifications'); // Import createNotification
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -76,6 +77,29 @@ app.post('/api/postDiscussion', async (req, res) => {
             WHERE d.post_id = ?`,
             [postId]
         );
+
+        // Fetch team members (excluding the post creator)
+        const [teamMembers] = await pool.query(
+            'SELECT user_id FROM user_team WHERE team_id = ? AND user_id != ?',
+            [teamId, userId]
+        );
+
+        if (teamMembers.length != 0) {
+            const recipientUserIds = teamMembers.map(member => member.user_id);
+            
+            // Fetch team name
+            const [teamData] = await pool.query('SELECT team_name FROM team WHERE team_id = ?', [teamId]);
+            const teamName = teamData[0].team_name;
+
+            // Create notification for discussion post
+            await createNotification(
+                teamId,
+                'discussion_posted',
+                `New discussion posted by ${discussion[0].first_name} ${discussion[0].last_name} in ${teamName}`,
+                `/teams/${teamId}/discussions/${postId}`, //Link to new discussion
+                recipientUserIds
+            );
+        }
 
         res.status(201).json(discussion[0]);
     } catch (error) {
