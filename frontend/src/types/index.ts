@@ -22,6 +22,8 @@ export interface FileItem {
   size: string;
   type: string;
   uploadedAt: Date;
+  first_name: string;
+  last_name: string;
 }
 
 export interface Activity {

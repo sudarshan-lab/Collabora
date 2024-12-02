@@ -33,6 +33,8 @@ export function FilesPage() {
             size: formatFileSize(file.file_size),
             type: file.content_type,
             uploadedAt: new Date(file.upload_timestamp),
+            first_name: file.first_name,
+            last_name: file.last_name,
           }))
         );
       } catch (error) {
@@ -73,6 +75,9 @@ export function FilesPage() {
             size: formatFileSize(file.size),
             type: file.type,
             uploadedAt: uploadedFile.file.upload_timestamp,
+            first_name: uploadedFile.file.first_name,
+            last_name: uploadedFile.file.last_name,
+            
           },
         ]);
       }

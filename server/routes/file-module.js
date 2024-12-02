@@ -11,7 +11,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const gcsBucketName = process.env.GCS_BUCKET_NAME; //Your GCS bucket name
 const storage = new Storage();
 const fs = require('fs');
-const createNotification = require('./notifications.js');
+const { createNotification } = require('./notifications.js');
 
 // Configure multer for in-memory storage
 const upload = multer({
@@ -92,7 +92,22 @@ app.post('/api/uploadFile/:teamId', upload.single('file'), async (req, res) => {
 
             // Fetch the recently uploaded file by ID
             const [recentFile] = await pool.query(
-                'SELECT * FROM file WHERE file_id = ?',
+                `SELECT 
+                    f.file_id, 
+                    f.filename, 
+                    f.original_filename, 
+                    f.file_extension, 
+                    f.team_id, 
+                    f.upload_timestamp, 
+                    f.gcs_bucket, 
+                    f.gcs_path, 
+                    f.file_size, 
+                    f.content_type, 
+                    u.first_name, 
+                    u.last_name
+                 FROM file f 
+                 LEFT JOIN user u ON f.user_id = u.user_id
+                 WHERE file_id = ?`,
                 [result.insertId]
             );
 
@@ -107,9 +122,9 @@ app.post('/api/uploadFile/:teamId', upload.single('file'), async (req, res) => {
 
             await createNotification(
                 teamId,
-                'file_upload',
+                'File upload',
                 `${req.file.originalname} uploaded to team ${teamName}`, 
-                `/teams/${teamId}/files/${result.insertId}`,
+                `/team/${teamId}/files/`,
                 recipientUserIds
             );
         }
@@ -154,9 +169,25 @@ app.get('/api/allFiles/:teamId', async (req, res) => {
             return res.status(403).json({ message: 'Forbidden: You are not a member of this team.' });
         }
 
-        // Fetch file list from the database
+        // Fetch file list along with user details
         const [files] = await pool.query(
-            'SELECT * FROM file WHERE team_id = ? ORDER BY upload_timestamp DESC',
+            `SELECT 
+                f.file_id, 
+                f.filename, 
+                f.original_filename, 
+                f.file_extension, 
+                f.team_id, 
+                f.upload_timestamp, 
+                f.gcs_bucket, 
+                f.gcs_path, 
+                f.file_size, 
+                f.content_type, 
+                u.first_name, 
+                u.last_name
+            FROM file f
+            LEFT JOIN user u ON f.user_id = u.user_id
+            WHERE f.team_id = ?
+            ORDER BY f.upload_timestamp DESC`,
             [teamId]
         );
 
@@ -258,6 +289,23 @@ app.delete('/api/deleteFiles/:fileId', async (req, res) => {
 
         // 3. Delete from the database
         await pool.query('DELETE FROM file WHERE file_id = ?', [fileId]);
+
+        const [teamMembers] = await pool.query('SELECT user_id FROM user_team WHERE team_id = ? AND user_id != ?', [teamId, userId]);
+        if (teamMembers.length != 0) {
+            const recipientUserIds = teamMembers.map(member => member.user_id);
+
+            // Fetch team name using teamId
+            const [teamData] = await pool.query('SELECT team_name FROM team WHERE team_id = ?', [teamId]);
+            const teamName = teamData[0].team_name; //Extract teamName
+
+            await createNotification(
+                teamId,
+                'Delete file',
+                `${fileData[0].original_filename} deleted from team ${teamName}`, 
+                `/team/${teamId}/files/`,
+                recipientUserIds
+            );
+        }
 
         res.json({ message: 'File deleted successfully' });
     } catch (error) {

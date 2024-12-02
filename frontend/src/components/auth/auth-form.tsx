@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { cn } from '../../lib/utils.ts';
 import { UserPlus, LogIn, Mail, Lock, Eye, EyeOff, User } from 'lucide-react';
-import { loginUser, signupUser } from '../service/service.ts';
+import { fetchUserTeams, loginUser, signupUser } from '../service/service.ts';
 import { useNavigate } from 'react-router-dom';
 
 interface AuthFormProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -94,9 +94,16 @@ export function AuthForm({ type, className, ...props }: AuthFormProps) {
         alert(response.message); 
         sessionStorage.setItem("Token", response.token);
         sessionStorage.setItem("User",JSON.stringify(response.user));
+        try {
+          const teamsResponse = await fetchUserTeams(response.token,response.user.userId); 
+          sessionStorage.setItem("Teams", JSON.stringify(teamsResponse));
+        } catch (err) {
+          console.error("Failed to fetch teams:", err.message);
+        }
         navigate('/home'); 
     }
     } catch (err) {
+      alert(err.message);
       console.log(err);
     } finally {
       setLoading(false);

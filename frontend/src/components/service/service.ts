@@ -552,3 +552,40 @@ export const deleteFile = async (token, fileId, teamId) => {
     throw new Error(error.response?.data?.message || 'Failed to delete file');
   }
 };
+
+export const fetchNotifications = async (token, limit = 4, offset = 0) => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/notifications/api/allnotifications`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      params: {
+        limit,
+        offset,
+      },
+    });
+
+    return response.data.notifications || [];
+  } catch (error) {
+    console.error('Error fetching notifications:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || 'Failed to fetch notifications');
+  }
+};
+
+export const updateNotificationReadStatus = async (token, notificationId) => {
+  try {
+    const response = await axios.put(
+      `${API_BASE_URL}/notifications/api/read/notification/${notificationId}`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Failed to update notification read status:', error.message);
+    throw error;
+  }
+};

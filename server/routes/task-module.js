@@ -89,9 +89,9 @@ app.post('/api/createTask', async (req, res) => {
             // Create the notification
             await createNotification(
                 team_id,
-                'task_created',
+                'Task created',
                 `${task_name} task has been created in ${teamName}`, //Link to the created task
-                'link',
+                `/team/${team_id}/tasks/${taskId}`,
                 recipientUserIds //Send notification to all team members (except the creator)
             );
         }
@@ -197,6 +197,28 @@ app.put('/api/updateTask/:taskId', async (req, res) => {
         updateValues.push(taskId);
 
         await pool.query(updateSql, updateValues);
+
+        const [teamMembers] = await pool.query(
+            'SELECT user_id FROM user_team WHERE team_id = ? AND user_id != ?',
+            [teamId, userId]
+        );
+        if (teamMembers.length != 0) {
+            const recipientUserIds = teamMembers.map(member => member.user_id);
+
+            // Fetch team name
+            const [teamData] = await pool.query('SELECT team_name FROM team WHERE team_id = ?', [teamId]);
+            const teamName = teamData[0].team_name;
+
+            // Create the notification
+            await createNotification(
+                teamId,
+                'Task updated',
+                `${task_name} task has been updated in ${teamName}`, //Link to the created task
+                `/team/${teamId}/tasks/${taskId}`,
+                recipientUserIds //Send notification to all team members (except the creator)
+            );
+        }
+
         res.json({ message: 'Task updated successfully' });
     } catch (error) {
         console.error('Error updating task:', error);
@@ -226,6 +248,7 @@ app.delete('/api/deleteTask/:taskId', async (req, res) => {
         }
 
         const teamId = taskExists[0].team_id;
+        const task_name = taskExists[0].task_name;
 
         // Check if user belongs to the team
         const [userInTeam] = await pool.query(
@@ -260,6 +283,27 @@ app.delete('/api/deleteTask/:taskId', async (req, res) => {
             'DELETE FROM task WHERE task_id IN (?)',
             [allTaskIdsToDelete]
         );
+
+        const [teamMembers] = await pool.query(
+            'SELECT user_id FROM user_team WHERE team_id = ? AND user_id != ?',
+            [teamId, userId]
+        );
+        if (teamMembers.length != 0) {
+            const recipientUserIds = teamMembers.map(member => member.user_id);
+
+            // Fetch team name
+            const [teamData] = await pool.query('SELECT team_name FROM team WHERE team_id = ?', [teamId]);
+            const teamName = teamData[0].team_name;
+
+            // Create the notification
+            await createNotification(
+                teamId,
+                'Task deleted',
+                `${task_name} task has been deleted in ${teamName}`, //Link to the created task
+                `/team/${teamId}/tasks/${taskId}`,
+                recipientUserIds //Send notification to all team members (except the creator)
+            );
+        }
 
         res.json({ message: 'Task and all associated subtasks deleted successfully' });
     } catch (error) {

@@ -37,10 +37,10 @@ export function FileList({ files, onDelete, onDownload }: FileListProps) {
                 </span>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors duration-200">
+                <h3 className="text-sm mb-1 font-medium text-gray-900 group-hover:text-blue-600 transition-colors duration-200">
                   {file.name}
                 </h3>
-                <p className="text-xs text-gray-500">{file.size}</p>
+                <p className="text-xs mb-1 text-gray-500">{(file.size)} • Uploaded by {file.first_name} {file.last_name}</p>
                 <div className="flex items-center space-x-1 text-xs text-gray-500 mt-1">
                   <Clock className="w-4 h-4 text-gray-400" />
                   <span>{format(new Date(file.uploadedAt), 'MMM d, yyyy h:mm a')}</span>

@@ -16,7 +16,6 @@ async function getUserIdFromToken(token) {
     }
 }
 
-// API to get a list of all notifications for the logged-in user
 app.get('/api/allnotifications', async (req, res) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -25,8 +24,11 @@ app.get('/api/allnotifications', async (req, res) => {
         return res.status(401).json({ message: 'Unauthorized: Invalid or expired token' });
     }
 
+    const limit = parseInt(req.query.limit, 10) || 10; // Default limit is 10
+    const offset = parseInt(req.query.offset, 10) || 0; // Default offset is 0
+
     try {
-        // Fetch notifications for the user, including team names
+        // Fetch notifications for the user, including team names, with pagination
         const [notifications] = await pool.query(`
             SELECT 
                 n.*, 
@@ -41,7 +43,8 @@ app.get('/api/allnotifications', async (req, res) => {
             WHERE 
                 nr.user_id = ?
             ORDER BY n.notified_at DESC
-        `, [userId]);
+            LIMIT ? OFFSET ?
+        `, [userId, limit, offset]);
 
         res.json({ notifications });
     } catch (error) {
@@ -82,6 +85,7 @@ app.put('/api/read/notification/:notificationId', async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
+
 
 
 module.exports = app;

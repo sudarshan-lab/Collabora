@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, MoreVertical, SortAsc, SortDesc } from 'lucide-react';
+import { Users, MoreVertical, SortAsc, SortDesc, Search } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { fetchUserTeams, removeTeam } from '../components/service/service';
 
@@ -9,8 +9,9 @@ export function TeamList() {
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [teamToDelete, setTeamToDelete] = useState(null);
-    const [deleting, setDeleting] = useState(false); // Track delete operation
-    const [sortOrder, setSortOrder] = useState("asc"); // Track sort order
+    const [deleting, setDeleting] = useState(false);
+    const [sortOrder, setSortOrder] = useState("asc");
+    const [searchQuery, setSearchQuery] = useState('');
     const navigate = useNavigate();
     const currentUser = JSON.parse(sessionStorage.getItem("User"));
 
@@ -44,9 +45,9 @@ export function TeamList() {
 
     const handleRemoveTeam = async () => {
         const token = sessionStorage.getItem('Token');
-        setDeleting(true); // Start the loader
+        setDeleting(true);
         try {
-            await removeTeam(token, teamToDelete.team_id); // Service call
+            await removeTeam(token, teamToDelete.team_id);
             const updatedTeams = teams.filter((team) => team.team_id !== teamToDelete.team_id);
             setTeams(updatedTeams);
             sessionStorage.setItem('Teams', JSON.stringify(updatedTeams));
@@ -57,7 +58,7 @@ export function TeamList() {
             setIsModalOpen(false);
             setTeamToDelete(null);
             setActiveDropdown(null);
-            setDeleting(false); // Stop the loader
+            setDeleting(false);
         }
     };
 
@@ -76,25 +77,43 @@ export function TeamList() {
             }
         });
         setTeams(sortedTeams);
-        setSortOrder(sortOrder === "asc" ? "desc" : "asc"); // Toggle sort order
+        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     };
+
+    const filteredTeams = teams.filter((team) =>
+        team.team_name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     return (
         <Layout>
             <div className="min-h-screen bg-gray-100">
                 <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center mb-8">
-                        <h1 className="text-3xl font-bold text-gray-900">Your Teams</h1>
-                        <button
-                            onClick={handleSort}
-                            className="flex items-center text-gray-600 hover:text-gray-800"
-                        >
-                            {sortOrder === "asc" ? <SortAsc className="w-5 h-5" /> : <SortDesc className="w-5 h-5" />}
-                        </button>
+                    <div className="mb-8">
+                        <h1 className="text-3xl font-bold text-gray-900 mb-4">Your Teams</h1>
+                        <div className="flex justify-between items-center">
+                            <div className="flex-1 max-w-xl pr-4 ">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search teams..."
+                                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleSort}
+                                className="flex items-center text-gray-600 hover:text-gray-800"
+                            >
+                                {sortOrder === "asc" ? <SortAsc className="w-5 h-5" /> : <SortDesc className="w-5 h-5" />}
+                            </button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                        {teams.map((team) => (
+                        {filteredTeams.map((team) => (
                             <div
                                 key={team.team_id}
                                 className="bg-white rounded-lg shadow-sm p-6 relative cursor-pointer hover:shadow-md transition-shadow"
@@ -135,11 +154,11 @@ export function TeamList() {
                             </div>
                         ))}
 
-                        {teams.length === 0 && (
+                        {filteredTeams.length === 0 && (
                             <div className="col-span-full text-center py-12">
                                 <Users className="mx-auto h-12 w-12 text-gray-400" />
-                                <h3 className="mt-2 text-sm font-medium text-gray-900">No teams</h3>
-                                <p className="mt-1 text-sm text-gray-500">Get started by creating a new team.</p>
+                                <h3 className="mt-2 text-sm font-medium text-gray-900">No teams found</h3>
+                                <p className="mt-1 text-sm text-gray-500">Try searching with a different term.</p>
                             </div>
                         )}
                     </div>

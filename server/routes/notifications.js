@@ -1,7 +1,7 @@
 const pool = require('../db'); // Your database connection pool
 
 
-async function createNotification(teamId, type, message, link, recipients) {
+const createNotification = async (teamId, type, message, link, recipients) => {
     try {
         const [result] = await pool.query(
             'INSERT INTO notification (team_id, notification_type, message, link) VALUES (?, ?, ?, ?)',
@@ -22,4 +22,4 @@ async function createNotification(teamId, type, message, link, recipients) {
     }
 }
 
-module.exports = { createNotification };
+module.exports = {createNotification};

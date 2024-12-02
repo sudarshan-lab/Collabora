@@ -94,9 +94,9 @@ app.post('/api/postDiscussion', async (req, res) => {
             // Create notification for discussion post
             await createNotification(
                 teamId,
-                'discussion_posted',
+                'Discussion posted',
                 `New discussion posted by ${discussion[0].first_name} ${discussion[0].last_name} in ${teamName}`,
-                `/teams/${teamId}/discussions/${postId}`, //Link to new discussion
+                `/team/${teamId}/discussions/`, //Link to new discussion
                 recipientUserIds
             );
         }
