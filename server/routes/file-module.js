@@ -83,6 +83,13 @@ app.post('/api/uploadFile/:teamId', upload.single('file'), async (req, res) => {
             res.status(500).json({ message: 'Error uploading file to GCS' });
         });
 
+        let responseBody;
+
+        const uploadPromise = new Promise((resolve, reject) => {
+            stream.on('error', (err) => {
+                reject(err);
+            });
+
         stream.on('finish', async () => {
             // 3. Save file metadata to MySQL
             const [result] = await pool.query(
@@ -131,6 +138,7 @@ app.post('/api/uploadFile/:teamId', upload.single('file'), async (req, res) => {
 
             res.status(201).json({ message: 'File uploaded successfully', file: recentFile[0] });
         });
+    });
 
         stream.end(req.file.buffer);
 
