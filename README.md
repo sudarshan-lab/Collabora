@@ -60,7 +60,7 @@ This will start the app on `http://localhost:5173`. Open the URL in your browser
 
 ---
 
-# Deployment Instructions for Collabora App on GCP VM
+# Deployment Instructions for Collabora frontend on GCP VM
 
 ## Step 1: Set up a Google Cloud VM instance
 
@@ -78,10 +78,9 @@ This will start the app on `http://localhost:5173`. Open the URL in your browser
 sudo apt update
 ```
 
-### 2. Install Node.js (version 18.x)
+### 2. Install Node.js 
 
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt install -y nodejs
 ```
 
@@ -105,7 +104,7 @@ sudo npm install -g pm2
 
 ```bash
 git clone https://github.com/sudarshan-lab/Collabora.git
-cd collabora-app
+cd Collabora/frontend
 ```
 
 ---
@@ -123,7 +122,7 @@ npm install
 ### 1. Start the app with PM2 to keep it running
 
 ```bash
-pm2 start npm --name "collabora-app" -- run dev
+pm2 start "npm run dev" --name "vite-app"
 ```
 
 ---
@@ -131,7 +130,7 @@ pm2 start npm --name "collabora-app" -- run dev
 ## Step 6: Open required ports in GCP firewall
 
 1. Go to the **Google Cloud Console** > **VPC network** > **Firewall rules**.
-2. Create a new rule to allow inbound traffic on port 5173 for development or port 80 for production.
+2. Create a new rule to allow inbound traffic on port 5173.
 
 ---
 
