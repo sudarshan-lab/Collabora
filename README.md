@@ -16,14 +16,8 @@ This will open the page where you can interact with the app.
 
 - **Real-time collaboration**: Users can interact with shared documents simultaneously.
 - **User-friendly interface**: A simple and intuitive design to facilitate easy collaboration.
-- **Responsive**: Optimized for both desktop and mobile devices.
-- **Access Control**: Role-based user management for secure document sharing.
-
-## Prerequisites
-
-- Node.js (v16+ recommended)
-- npm (v8+ recommended)
-- Google Cloud Platform (GCP) account
+- **Responsive**: Optimized and fully responsive web app.
+- **Access Control**: Role-based user management.
 
 ## Setup Instructions (for local development)
 
@@ -31,3 +25,17 @@ This will open the page where you can interact with the app.
    ```bash
    git clone https://github.com/yourusername/collabora-app.git
    cd collabora-app
+2. **Install dependencies**: Make sure you have npm installed, then run:
+   ```bash
+   npm install
+3. **Run the app locally**:
+   ```bash
+   npm run dev
+This will start the app on http://localhost:5173. Open the URL in your browser to start viewing app.
+
+**Technologies Used**:
+
+**Frontend**: React, Vite, TailwindCSS.
+**Backend**: Node.js.
+**Deployment**: Google Cloud Platform (GCP), PM2 (for process management).
+
