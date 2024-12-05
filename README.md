@@ -60,7 +60,7 @@ This will start the app on `http://localhost:5173`. Open the URL in your browser
 
 ---
 
-# Deployment Instructions for Collabora frontend on GCP VM
+# Deployment Instructions for frontend on GCP VM
 
 ## Step 1: Set up a Google Cloud VM instance
 
