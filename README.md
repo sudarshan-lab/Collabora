@@ -22,13 +22,18 @@ This will open the page where you can interact with the app.
 ## Setup Instructions (for local development)
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/yourusername/collabora-app.git
    cd collabora-app
-2. **Install dependencies**: Make sure you have npm installed, then run:
+   
+3. **Install dependencies**: Make sure you have npm installed, then run:
+   
    ```bash
    npm install
-3. **Run the app locally**:
+   
+5. **Run the app locally**:
+   
    ```bash
    npm run dev
 This will start the app on http://localhost:5173. Open the URL in your browser to start viewing app.
@@ -36,6 +41,8 @@ This will start the app on http://localhost:5173. Open the URL in your browser t
 **Technologies Used**:
 
 **Frontend**: React, Vite, TailwindCSS.
+
 **Backend**: Node.js.
+
 **Deployment**: Google Cloud Platform (GCP), PM2 (for process management).
 
