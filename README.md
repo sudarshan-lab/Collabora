@@ -24,7 +24,7 @@ This will open the page where you can interact with the app.
 1. **Clone the repository**:
 
    ```bash
-   git clone [https://github.com/sudarshan-lab/Collabora.git]
+   git clone https://github.com/sudarshan-lab/Collabora.git
    cd collabora-app
    
 3. **Install dependencies**: Make sure you have npm installed, then run:
