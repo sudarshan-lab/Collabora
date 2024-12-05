@@ -58,7 +58,7 @@ This will start the app on http://localhost:5173. Open the URL in your browser t
 **Update the package list**
 
 ```bash
-sudo apt update
+sudo apt update```
 
 **Install Node.js (version 18.x)**
 
