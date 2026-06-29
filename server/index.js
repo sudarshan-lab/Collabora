@@ -9,12 +9,20 @@ const discussionRouter = require('./routes/discussion-module');
 const fileRouter = require('./routes/file-module');
 const notificationRouter = require('./routes/notificationRouter');
 const app = express();
-const port = 3000;
+// Cloud Run injects PORT (defaults to 8080); fall back to 3000 locally.
+const port = process.env.PORT || 3000;
+
+// Comma-separated list of allowed frontend origins, e.g.
+// CORS_ORIGINS="https://collabora.web.app,http://localhost:5173"
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
 
 app.use(cors({
-  origin: ['http://34.132.245.252:5173', 'http://localhost:5173'], 
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], 
-  credentials: true 
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
 }));
 
 

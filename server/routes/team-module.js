@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const jwt = require('jsonwebtoken');
+const { sendAddedToTeamEmail } = require('../services/email');
 const app = express();
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -230,6 +231,17 @@ app.post('/api/teams/:teamId/add-members', async (req, res) => {
             )
         );
         await Promise.all(addUserPromises);
+
+        // Best-effort "you've been added" email to each added user.
+        try {
+            const [teamRow] = await pool.query('SELECT team_name FROM team WHERE team_id = ?', [teamId]);
+            const teamName = teamRow[0] && teamRow[0].team_name;
+            const [adderRow] = await pool.query('SELECT first_name, last_name FROM user WHERE user_id = ?', [userId]);
+            const addedByName = adderRow[0] ? `${adderRow[0].first_name} ${adderRow[0].last_name}`.trim() : undefined;
+            existingUsers.forEach((u) => sendAddedToTeamEmail({ recipient: u, teamName, addedByName }));
+        } catch (mailErr) {
+            console.error('Error sending added-to-team emails:', mailErr.message);
+        }
 
         // Fetch all team members after adding
         const [teamMembers] = await pool.query(

@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db'); // Import the database pool
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { sendWelcomeEmail } = require('../services/email');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -60,6 +61,9 @@ router.post('/signup', async (req, res) => {
         );
 
         const userId = results.insertId;
+
+        // Best-effort welcome email (don't block signup on mail).
+        sendWelcomeEmail({ email, first_name: firstname });
 
         res.status(201).json({ message: 'User created successfully', userId });
     } catch (error) {

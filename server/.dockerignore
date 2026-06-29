@@ -1,0 +1,8 @@
+node_modules
+npm-debug.log
+.env
+.production.env
+gcpbucketkey.json
+dist
+.git
+.DS_Store

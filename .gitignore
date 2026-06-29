@@ -1,0 +1,9 @@
+# OS
+.DS_Store
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Local env / secrets (also ignored in server/.gitignore)
+.env
+*.local

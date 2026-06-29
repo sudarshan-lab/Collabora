@@ -4,8 +4,35 @@ const jwt = require('jsonwebtoken');
 const app = express();
 app.use(express.json());
 const { createNotification } = require('./notifications'); // Import createNotification
+const { sendTaskAssignedEmail } = require('../services/email');
 
 const JWT_SECRET = process.env.JWT_SECRET;
+
+// Email the assignee about a task assignment (best-effort).
+async function notifyAssignee(assigneeId, taskId, teamId, assignerId) {
+    try {
+        const [[assignee]] = await pool.query(
+            'SELECT first_name, email FROM user WHERE user_id = ?', [assigneeId]
+        );
+        if (!assignee || !assignee.email) return;
+        const [[task]] = await pool.query(
+            'SELECT task_name, due_date FROM task WHERE task_id = ?', [taskId]
+        );
+        const [[team]] = await pool.query('SELECT team_name FROM team WHERE team_id = ?', [teamId]);
+        const [[assigner]] = await pool.query(
+            'SELECT first_name, last_name FROM user WHERE user_id = ?', [assignerId]
+        );
+        sendTaskAssignedEmail({
+            recipient: assignee,
+            taskName: task ? task.task_name : 'a task',
+            teamName: team ? team.team_name : undefined,
+            dueDate: task ? task.due_date : undefined,
+            assignedByName: assigner ? `${assigner.first_name} ${assigner.last_name}`.trim() : undefined,
+        });
+    } catch (mailErr) {
+        console.error('Error sending task-assigned email:', mailErr.message);
+    }
+}
 
 //Helper function to validate and extract user ID from JWT
 async function getUserIdFromToken(token) { 
@@ -371,6 +398,7 @@ app.post('/api/assignUserToTask', async (req, res) => {
             'UPDATE task SET status = ? WHERE task_id = ?',
             ['open', taskId]
         );
+        notifyAssignee(user_id_to_assign, taskId, teamId, userId);
         res.json({ message: 'User assigned to task successfully' });
     } catch (error) {
         console.error('Error assigning user to task:', error);
@@ -441,6 +469,7 @@ app.put('/api/updateUserToTask', async (req, res) => {
             ['open', taskId]
         );
 
+        notifyAssignee(user_id_to_assign, taskId, teamId, userId);
         res.json({ message: 'Task user updated successfully' });
     } catch (error) {
         console.error('Error updating task user:', error);
