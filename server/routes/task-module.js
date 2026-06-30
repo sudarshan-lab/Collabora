@@ -61,12 +61,16 @@ app.post('/api/createTask', async (req, res) => {
     }
 
     try {
-        const { task_name, task_description, due_date, team_id, parent_task_id } = req.body;
+        const { task_name, task_description, due_date, team_id, parent_task_id, issue_type, priority } = req.body;
 
         //Input validation
         if (!task_name || !team_id) {
             return res.status(400).json({ message: 'Task name and team ID are required' });
         }
+        const allowedTypes = ['story', 'task', 'bug', 'epic'];
+        const allowedPriorities = ['highest', 'high', 'medium', 'low', 'lowest'];
+        const taskType = allowedTypes.includes(issue_type) ? issue_type : 'task';
+        const taskPriority = allowedPriorities.includes(priority) ? priority : 'medium';
 
         //Check if user belongs to the team
         const [userInTeam] = await pool.query(
@@ -88,8 +92,8 @@ app.post('/api/createTask', async (req, res) => {
         }
 
         const [result] = await pool.query(
-            'INSERT INTO task (task_name, task_description, due_date, team_id) VALUES (?, ?, ?, ?)',
-            [task_name, task_description, due_date, team_id]
+            'INSERT INTO task (task_name, task_description, issue_type, priority, due_date, team_id) VALUES (?, ?, ?, ?, ?, ?)',
+            [task_name, task_description, taskType, taskPriority, due_date, team_id]
         );
         const taskId = result.insertId;
 
@@ -180,13 +184,15 @@ app.put('/api/updateTask/:taskId', async (req, res) => {
     const taskId = parseInt(req.params.taskId);
 
     try {
-        const { task_name, task_description, due_date, status } = req.body;
+        const { task_name, task_description, due_date, status, issue_type, priority } = req.body;
         const updates = {};
 
         if (task_name) updates.task_name = task_name;
         if (task_description) updates.task_description = task_description;
         if (due_date) updates.due_date = due_date;
         if (status) updates.status = status;
+        if (issue_type) updates.issue_type = issue_type;
+        if (priority) updates.priority = priority;
 
         if (Object.keys(updates).length === 0) {
             return res.status(400).json({ message: 'No fields to update' });

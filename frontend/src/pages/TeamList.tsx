@@ -86,26 +86,26 @@ export function TeamList() {
 
     return (
         <Layout>
-            <div className="min-h-screen bg-gray-100">
-                <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            <div className="min-h-full">
+                <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
                     <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-4">Your Teams</h1>
-                        <div className="flex justify-between items-center">
-                            <div className="flex-1 max-w-xl pr-4 ">
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search teams..."
-                                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                    />
-                                </div>
+                        <h1 className="page-title">Your <span className="brand-text">Teams</span></h1>
+                        <p className="mt-1 text-sm text-gray-500">Jump into a workspace or spin up a new one.</p>
+                        <div className="mt-5 flex items-center gap-3">
+                            <div className="relative flex-1 max-w-xl">
+                                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search teams..."
+                                    className="input-icon"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
                             </div>
                             <button
                                 onClick={handleSort}
-                                className="flex items-center text-gray-600 hover:text-gray-800"
+                                className="btn-outline px-3"
+                                title="Sort by name"
                             >
                                 {sortOrder === "asc" ? <SortAsc className="w-5 h-5" /> : <SortDesc className="w-5 h-5" />}
                             </button>
@@ -114,38 +114,45 @@ export function TeamList() {
 
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                         {filteredTeams.map((team) => (
-                            <div
-                                key={team.team_id}
-                                className="bg-white rounded-lg shadow-sm p-6 relative cursor-pointer hover:shadow-md transition-shadow"
-                            >
-                                <div onClick={() => handleTeamClick(team)} className="flex items-center gap-3 mb-4">
-                                    <div className="p-2 bg-blue-100 rounded-lg">
-                                        <Users className="w-6 h-6 text-blue-600" />
+                            <div key={team.team_id} className="card card-hover relative p-6">
+                                <div onClick={() => handleTeamClick(team)} className="cursor-pointer">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-pink-500 text-white shadow-md shadow-blue-500/20">
+                                            <Users className="w-6 h-6" />
+                                        </div>
+                                        <h2 className="text-lg font-bold text-gray-900 truncate">{team.team_name}</h2>
                                     </div>
-                                    <h2 className="text-xl font-semibold text-gray-900">{team.team_name}</h2>
-                                </div>
-                                <p className="text-gray-600 mb-4">{team.team_description}</p>
-                                <div className="text-sm text-gray-500">
-                                    {team.member_count || 0} member{team.member_count !== 1 ? 's' : ''}
+                                    <p className="mt-4 line-clamp-2 min-h-[2.5rem] text-sm text-gray-500">
+                                        {team.team_description || 'No description provided.'}
+                                    </p>
+                                    <div className="mt-4 flex items-center gap-2">
+                                        <span className="chip bg-blue-50 text-blue-600">
+                                            <Users className="h-3.5 w-3.5" />
+                                            {team.member_count || 0} member{team.member_count !== 1 ? 's' : ''}
+                                        </span>
+                                        {team.role === 'admin' && (
+                                            <span className="chip bg-pink-50 text-pink-600">Admin</span>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {team.role === 'admin' && (
-                                    <div className="absolute bottom-4 right-4">
+                                    <div className="absolute top-4 right-4">
                                         <button
                                             onClick={() =>
                                                 setActiveDropdown(activeDropdown === team.team_id ? null : team.team_id)
                                             }
-                                            className="text-gray-600 hover:text-gray-800"
+                                            className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
                                         >
                                             <MoreVertical className="w-4 h-4" />
                                         </button>
                                         {activeDropdown === team.team_id && (
-                                            <div className="absolute right-0 mt-2 bg-white border shadow-lg rounded-md p-4 z-10 w-48">
+                                            <div className="absolute right-0 z-10 mt-1 w-44 overflow-hidden rounded-xl border border-gray-100 bg-white p-1 shadow-xl">
                                                 <button
                                                     onClick={() => confirmDeleteTeam(team)}
-                                                    className="block px-6 py-3 text-base text-red-500 hover:bg-red-100 rounded-lg w-full text-left"
+                                                    className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-500 transition-colors hover:bg-red-50"
                                                 >
-                                                    Remove Team
+                                                    Remove team
                                                 </button>
                                             </div>
                                         )}
@@ -155,10 +162,16 @@ export function TeamList() {
                         ))}
 
                         {filteredTeams.length === 0 && (
-                            <div className="col-span-full text-center py-12">
-                                <Users className="mx-auto h-12 w-12 text-gray-400" />
-                                <h3 className="mt-2 text-sm font-medium text-gray-900">No teams found</h3>
-                                <p className="mt-1 text-sm text-gray-500">Try searching with a different term.</p>
+                            <div className="col-span-full">
+                                <div className="card flex flex-col items-center py-16 text-center">
+                                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
+                                        <Users className="h-7 w-7 text-blue-400" />
+                                    </div>
+                                    <h3 className="mt-4 text-base font-semibold text-gray-900">No teams found</h3>
+                                    <p className="mt-1 text-sm text-gray-500">
+                                        {searchQuery ? 'Try a different search term.' : 'Create your first team from the sidebar.'}
+                                    </p>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -166,28 +179,20 @@ export function TeamList() {
             </div>
 
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
-                        <h2 className="text-lg font-semibold mb-4 text-center">Confirm Team Deletion</h2>
-                        <p className="text-sm text-gray-700 mb-4 text-center">
-                            Are you sure you want to delete the team <strong>{teamToDelete?.team_name}</strong>? This action cannot be undone.
+                <div className="modal-overlay">
+                    <div className="modal-card">
+                        <h2 className="text-lg font-bold text-gray-900">Delete team?</h2>
+                        <p className="mt-2 text-sm text-gray-600">
+                            Are you sure you want to delete <strong className="text-gray-900">{teamToDelete?.team_name}</strong>? This action cannot be undone.
                         </p>
-                        <div className="flex justify-end gap-4">
-                            <button
-                                onClick={() => setIsModalOpen(false)}
-                                className="px-4 py-2 text-sm bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-                                disabled={deleting}
-                            >
+                        <div className="mt-6 flex justify-end gap-2">
+                            <button onClick={() => setIsModalOpen(false)} className="btn-ghost" disabled={deleting}>
                                 Cancel
                             </button>
-                            <button
-                                onClick={handleRemoveTeam}
-                                className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
-                                disabled={deleting}
-                            >
+                            <button onClick={handleRemoveTeam} className="btn-danger" disabled={deleting}>
                                 {deleting ? (
                                     <>
-                                        <div className="loader w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                                         Deleting...
                                     </>
                                 ) : (

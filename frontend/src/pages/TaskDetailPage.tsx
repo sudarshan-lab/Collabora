@@ -220,7 +220,7 @@ export function TaskDetailPage() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-full">
         <TaskDetailHeader
           task={task}
           onUpdateStatus={async (newStatus) => {
@@ -248,9 +248,9 @@ export function TaskDetailPage() {
           <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-lg shadow-sm p-6 relative"
+              className="card relative p-6"
             >
-              <h2 className="text-xl font-semibold mb-4">Description</h2>
+              <h2 className="mb-4 text-lg font-bold text-gray-900">Description</h2>
 
               {/* Toggle Between Pencil and Close Icons */}
               <button
@@ -302,24 +302,24 @@ export function TaskDetailPage() {
 
 
 
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex gap-4 mb-6">
+            <div className="card p-6">
+              <div className="mb-6 flex gap-2 border-b border-gray-100 pb-4">
                 <button
                   onClick={() => setActiveTab('subtasks')}
-                  className={`px-4 py-2 text-sm font-medium rounded-md ${
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
                     activeTab === 'subtasks'
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-500 hover:text-gray-700'
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
                   }`}
                 >
                   Sub-tasks ({subTask?.length || 0})
                 </button>
                 <button
                   onClick={() => setActiveTab('comments')}
-                  className={`px-4 py-2 text-sm font-medium rounded-md ${
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
                     activeTab === 'comments'
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-500 hover:text-gray-700'
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
                   }`}
                 >
                   Comments ({task.comments?.length || 0})
@@ -328,10 +328,7 @@ export function TaskDetailPage() {
 
               {activeTab === 'subtasks' ? (
                 <div>
-                  <button
-                    onClick={() => setShowSubTaskForm(true)}
-                    className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 mb-4"
-                  >
+                  <button onClick={() => setShowSubTaskForm(true)} className="btn-brand mb-4">
                     Create Subtask
                   </button>
                   <div className="space-y-4">
@@ -386,74 +383,58 @@ export function TaskDetailPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            className="modal-overlay"
           >
             <motion.div
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg"
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="modal-card"
             >
-              <h2 className="text-lg font-semibold mb-4 text-center">
-                Create Subtask
-              </h2>
+              <h2 className="mb-1 text-lg font-bold text-gray-900">Create subtask</h2>
+              <p className="mb-5 text-sm text-gray-500">Break this task into smaller pieces.</p>
               <form onSubmit={handleCreateSubTask} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Subtask Name
-                  </label>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">Subtask name</label>
                   <input
                     type="text"
                     value={subTaskName}
                     onChange={(e) => setSubTaskName(e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    className="input-field"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Description
-                  </label>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">Description</label>
                   <textarea
                     value={subTaskDescription}
                     onChange={(e) => setSubTaskDescription(e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    className="input-field h-auto py-2.5"
                     rows={3}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Due Date
-                  </label>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">Due date</label>
                   <input
                     type="date"
                     value={subTaskDueDate}
                     onChange={(e) => setSubTaskDueDate(e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    className="input-field"
                     required
                   />
                 </div>
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowSubTaskForm(false)}
-                    className="px-4 py-2 text-sm bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-                    disabled={isCreatingSubTask}
-                  >
+                <div className="flex justify-end gap-2 pt-1">
+                  <button type="button" onClick={() => setShowSubTaskForm(false)} className="btn-ghost" disabled={isCreatingSubTask}>
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
-                    disabled={isCreatingSubTask}
-                  >
+                  <button type="submit" className="btn-brand" disabled={isCreatingSubTask}>
                     {isCreatingSubTask ? (
                       <>
-                        <div className="loader w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                         Creating...
                       </>
                     ) : (
-                      'Create'
+                      'Create subtask'
                     )}
                   </button>
                 </div>
@@ -467,15 +448,15 @@ export function TaskDetailPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="modal-overlay"
         >
           <motion.div
-            initial={{ scale: 0.95 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0.95 }}
-            className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="modal-card"
           >
-            <h2 className="text-lg font-semibold mb-4 text-center">Edit Task</h2>
+            <h2 className="mb-5 text-lg font-bold text-gray-900">Edit task</h2>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -484,53 +465,41 @@ export function TaskDetailPage() {
               className="space-y-4"
             >
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-4">
-                  Task Name
-                </label>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Task name</label>
                 <input
                   type="text"
                   value={editTaskName}
                   onChange={(e) => setEditTaskName(e.target.value)}
-                  className="w-full rounded-md border-gray-300 px-3 py-2 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  className="input-field"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-4">
-                  Task Description
-                </label>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Task description</label>
                 <textarea
                   value={editTaskDescription}
                   onChange={(e) => setEditTaskDescription(e.target.value)}
-                  className="w-full rounded-md border-gray-300 px-3 py-2 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  className="input-field h-auto py-2.5"
                   rows={4}
                 ></textarea>
               </div>
-              <div className="flex justify-end gap-4">
-                <button
-                  type="button"
-                  onClick={() => setShowEditForm(false)}
-                  className="px-4 py-2 text-sm bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-                >
+              <div className="flex justify-end gap-2 pt-1">
+                <button type="button" onClick={() => setShowEditForm(false)} className="btn-ghost">
                   Cancel
                 </button>
                 <button
-                type="submit"
-                className={`px-4 py-2 text-sm rounded-md flex items-center gap-2 ${
-                  isButtonEnabled
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-                disabled={!isButtonEnabled || isSaving} // Disable if no changes or saving in progress
-              >
-                {isSaving ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
-                    Saving...
-                  </>
-                ) : (
-                  'Save Changes'
-                )}
-              </button>
+                  type="submit"
+                  className={isButtonEnabled ? 'btn-brand' : 'btn-brand opacity-50 cursor-not-allowed'}
+                  disabled={!isButtonEnabled || isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </button>
               </div>
             </form>
           </motion.div>
@@ -541,37 +510,26 @@ export function TaskDetailPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="modal-overlay"
         >
           <motion.div
-            initial={{ scale: 0.95 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0.95 }}
-            className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="modal-card"
           >
-            <h2 className="text-lg font-semibold mb-4 text-center">
-              Confirm Deletion
-            </h2>
-            <p className="text-sm text-gray-700 mb-6 text-center">
-              Are you sure you want to delete this task? All the subtasks associated will be deleted
-              and cannot be undone.
+            <h2 className="text-lg font-bold text-gray-900">Delete task?</h2>
+            <p className="mt-2 mb-6 text-sm text-gray-600">
+              Are you sure you want to delete this task? All associated subtasks will be deleted and this cannot be undone.
             </p>
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={() => setShowDeleteConfirmation(false)}
-                className="px-4 py-2 text-sm bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-                disabled={isDeleting} 
-              >
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowDeleteConfirmation(false)} className="btn-ghost" disabled={isDeleting}>
                 Cancel
               </button>
-              <button
-                onClick={handleDeleteTask}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
-                disabled={isDeleting} 
-              >
+              <button onClick={handleDeleteTask} className="btn-danger" disabled={isDeleting}>
                 {isDeleting ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                     Deleting...
                   </>
                 ) : (

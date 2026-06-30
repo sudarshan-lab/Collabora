@@ -8,6 +8,7 @@ const taskRouter = require('./routes/task-module');
 const discussionRouter = require('./routes/discussion-module');
 const fileRouter = require('./routes/file-module');
 const notificationRouter = require('./routes/notificationRouter');
+const aiRouter = require('./routes/ai-module');
 const app = express();
 // Cloud Run injects PORT (defaults to 8080); fall back to 3000 locally.
 const port = process.env.PORT || 3000;
@@ -33,6 +34,7 @@ app.use('/tasks', taskRouter);
 app.use('/discussion', discussionRouter);
 app.use('/files', fileRouter);
 app.use('/notifications', notificationRouter);
+app.use('/ai', aiRouter);
 
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);

@@ -52,9 +52,9 @@ export function TaskList() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">Recent Tasks</h2>
+    <div className="card overflow-hidden">
+      <div className="border-b border-gray-100 px-6 py-4">
+        <h2 className="text-lg font-bold text-gray-900">Recent Tasks</h2>
       </div>
       {loadingTasks ? (
           <div className="px-6 py-4 text-center text-gray-500">
@@ -81,17 +81,17 @@ export function TaskList() {
             <p className="mt-2">Loading tasks...</p>
           </div>
         ) : tasks.length === 0 ? (
-          <div className="col-span-full text-center py-12">
-              <Users className="mx-auto h-10 w-10 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No tasks</h3>
+          <div className="py-12 text-center">
+              <Users className="mx-auto h-10 w-10 text-gray-300" />
+              <h3 className="mt-2 text-sm font-semibold text-gray-900">No tasks</h3>
               <p className="mt-1 text-sm text-gray-500">Get started by creating a new task.</p>
           </div>
       ) : (
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-gray-100">
           {tasks.map((task) => (
             <div
               key={task.task_id}
-              className="px-6 py-4 hover:bg-gray-50 cursor-pointer"
+              className="cursor-pointer px-6 py-4 transition-colors hover:bg-blue-50/40"
               onClick={() => handleTaskClick(task.task_id)}
             >
               <div className="flex items-center justify-between">

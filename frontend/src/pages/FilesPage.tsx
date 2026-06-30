@@ -128,10 +128,11 @@ export function FilesPage() {
       )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-6">
-          <div className="w-80 flex-shrink-0">
-            <div className="bg-white rounded-lg shadow-sm p-4 sticky top-8">
-              <h2 className="text-lg font-medium text-gray-900 mb-3">Upload Files</h2>
+        <h1 className="page-title mb-6">Files</h1>
+        <div className="flex flex-col gap-6 lg:flex-row">
+          <div className="w-full flex-shrink-0 lg:w-80">
+            <div className="card sticky top-24 p-5">
+              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-400">Upload files</h2>
               <UploadZone
                 onFileSelect={handleUploadFile}
                 onError={(error) => showToast(error, 'error')}
@@ -140,14 +141,21 @@ export function FilesPage() {
           </div>
 
           <div className="flex-1">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">All Files</h2>
-                <span className="text-sm text-gray-500">{files.length} files</span>
+            <div className="card p-6">
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900">All files</h2>
+                <span className="chip bg-blue-50 text-blue-600">{files.length} file{files.length !== 1 ? 's' : ''}</span>
               </div>
               {isLoading ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-500 text-lg">Loading files...</p>
+                <div className="flex flex-col items-center py-16">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-200 border-t-blue-500"></div>
+                  <p className="mt-3 text-sm text-gray-500">Loading files...</p>
+                </div>
+              ) : files.length === 0 ? (
+                <div className="flex flex-col items-center py-16 text-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-2xl">📁</div>
+                  <p className="mt-4 text-base font-semibold text-gray-900">No files yet</p>
+                  <p className="mt-1 text-sm text-gray-500">Upload files using the panel on the left.</p>
                 </div>
               ) : (
                 <FileList
@@ -155,12 +163,6 @@ export function FilesPage() {
                   onDelete={handleDeleteFile}
                   onDownload={handleDownloadFile}
                 />
-              )}
-              {!isLoading && files.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-gray-500 text-lg">No files available</p>
-                  <p className="text-gray-400 text-sm mt-2">Upload files using the panel on the left</p>
-                </div>
               )}
             </div>
           </div>

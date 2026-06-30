@@ -55,8 +55,10 @@ CREATE TABLE IF NOT EXISTS `task` (
   `task_id`          INT          NOT NULL AUTO_INCREMENT,
   `task_name`        VARCHAR(255) NOT NULL,
   `task_description` TEXT         NULL,
+  `issue_type`       ENUM('story','task','bug','epic') NOT NULL DEFAULT 'task',
+  `priority`         ENUM('highest','high','medium','low','lowest') NOT NULL DEFAULT 'medium',
   `due_date`         DATE         NULL,
-  `status`           VARCHAR(50)  NOT NULL DEFAULT 'unassigned', -- set to 'open' on assignment
+  `status`           VARCHAR(50)  NOT NULL DEFAULT 'open', -- open | in-progress | in-review | completed
   `team_id`          INT          NOT NULL,
   `created_at`       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`task_id`),

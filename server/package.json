@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.109.0",
     "@google-cloud/storage": "^7.14.0",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.3",

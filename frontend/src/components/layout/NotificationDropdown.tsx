@@ -47,26 +47,29 @@ export function NotificationDropdown() {
   return (
     <div className="relative">
       <button
-        className="p-2 rounded-md hover:bg-gray-100 relative"
+        className="relative rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <Bell className="h-6 w-6 text-gray-500" />
+        <Bell className="h-5 w-5" />
         {notifications.some((n) => n.read_status === 0) && (
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full"></span>
+          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-pink-500 ring-2 ring-white"></span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-          <div className="p-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold">Notifications</h3>
+        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl">
+          <div className="border-b border-gray-100 p-4">
+            <h3 className="text-base font-bold text-gray-900">Notifications</h3>
           </div>
           <div className="max-h-96 overflow-y-auto">
+            {notifications.length === 0 && !loading && (
+              <p className="px-4 py-8 text-center text-sm text-gray-400">You're all caught up 🎉</p>
+            )}
             {notifications.map((notification, index) => (
               <div
                 key={notification.notification_id || index}
-                className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
-                  notification.read_status === 0 ? 'bg-blue-50' : ''
+                className={`cursor-pointer border-b border-gray-50 p-4 transition-colors hover:bg-gray-50 ${
+                  notification.read_status === 0 ? 'bg-blue-50/60' : ''
                 }`}
                 onClick={async () => {
                   if (notification.read_status === 0) {

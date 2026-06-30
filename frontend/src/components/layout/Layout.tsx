@@ -29,7 +29,7 @@ export function Layout({ children }: LayoutProps) {
 
       <div className="flex-1 flex flex-col min-w-0">
         <Header onMenuClick={toggleSidebar} />
-        <main className="flex-1 overflow-auto bg-gray-100">
+        <main className="flex-1 overflow-auto app-bg">
           {children}
         </main>
       </div>

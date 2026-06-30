@@ -144,26 +144,28 @@ export function DiscussionPage() {
             className="mb-8"
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <MessageSquare className="w-6 h-6 text-blue-600 mr-2" />
-                <h2 className="text-2xl font-bold text-gray-900">Discussions</h2>
+              <div className="flex items-center gap-2">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-pink-500 text-white shadow-md shadow-blue-500/20">
+                  <MessageSquare className="h-5 w-5" />
+                </span>
+                <h2 className="page-title">Discussions</h2>
               </div>
-              <button
-                onClick={() => setIsNewDiscussionOpen(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
+              <button onClick={() => setIsNewDiscussionOpen(true)} className="btn-brand">
                 New Discussion
               </button>
             </div>
           </motion.div>
 
           {discussions.length === 0 && isNewDiscussionOpen === false && (
-                            <div className="col-span-full text-center py-12">
-                                <Users className="mx-auto h-12 w-12 text-gray-400" />
-                                <h3 className="mt-2 text-sm font-medium text-gray-900">No discussions</h3>
-                                <p className="mt-1 text-sm text-gray-500">Get started by creating a new discussion.</p>
-                            </div>
-                        )}
+            <div className="card flex flex-col items-center py-16 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
+                <MessageSquare className="h-7 w-7 text-blue-400" />
+              </div>
+              <h3 className="mt-4 text-base font-semibold text-gray-900">No discussions yet</h3>
+              <p className="mt-1 text-sm text-gray-500">Get started by creating a new discussion.</p>
+              <button onClick={() => setIsNewDiscussionOpen(true)} className="btn-brand mt-5">New Discussion</button>
+            </div>
+          )}
 
           <AnimatePresence>
             {isNewDiscussionOpen && (
@@ -171,13 +173,13 @@ export function DiscussionPage() {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="mb-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+                className="card mb-8 p-6"
               >
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">Start a New Discussion</h3>
+                  <h3 className="text-lg font-bold text-gray-900">Start a new discussion</h3>
                   <button
                     onClick={() => setIsNewDiscussionOpen(false)}
-                    className="text-gray-400 hover:text-gray-500"
+                    className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -190,7 +192,7 @@ export function DiscussionPage() {
                         value={newDiscussionContent}
                         onChange={(e) => setNewDiscussionContent(e.target.value)}
                         rows={4}
-                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500"
+                        className="input-field h-auto py-2.5"
                         placeholder="Describe your topic..."
                       />
                     </div>
@@ -198,10 +200,10 @@ export function DiscussionPage() {
                       <button
                         type="submit"
                         disabled={!newDiscussionContent.trim() || isPosting}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                        className="btn-brand"
                       >
                         {isPosting ? (
-                          <div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                         ) : null}
                         {isPosting ? 'Posting...' : 'Post Discussion'}
                       </button>
@@ -213,7 +215,10 @@ export function DiscussionPage() {
           </AnimatePresence>
 
           {isLoading ? (
-            <div className="text-center text-gray-600">Loading discussions...</div>
+            <div className="flex flex-col items-center py-16">
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-200 border-t-blue-500"></div>
+              <p className="mt-3 text-sm text-gray-500">Loading discussions...</p>
+            </div>
           ) : (
             <motion.div layout className="space-y-6">
               {discussions.map((discussion) => (
@@ -247,7 +252,7 @@ export function DiscussionPage() {
         <motion.div
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="bg-white rounded-lg shadow-sm p-6 space-y-6 mt-10  h-[300px] overflow-y-auto"
+        className="card sticky top-24 space-y-6 p-6"
         >
           {teamData ? (
             <>
@@ -282,14 +287,7 @@ export function DiscussionPage() {
                   {teamData.members.map((member: any) => (
                     <div
                       key={member.user_id}
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium text-white border-2 border-white cursor-pointer"
-                      style={{
-                        background: `linear-gradient(135deg, #${Math.floor(
-                          Math.random() * 16777215
-                        ).toString(16)} 0%, #${Math.floor(
-                          Math.random() * 16777215
-                        ).toString(16)} 100%)`,
-                      }}
+                      className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-blue-500 to-pink-500 text-xs font-bold text-white shadow-sm"
                       title={`${member.first_name} ${member.last_name}`}
                     >
                       {member.first_name[0]}

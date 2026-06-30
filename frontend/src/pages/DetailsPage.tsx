@@ -118,7 +118,7 @@ export function DetailsPage() {
     return (
       <Layout>
         <div className="flex items-center justify-center h-full">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
         </div>
       </Layout>
     );
@@ -189,8 +189,8 @@ const handleRemoveAdmin = async (userId) => {
 
   return (
     <Layout>
-      <div className="container mx-6 p-6 max-w-4xl">
-        <div className="bg-white rounded-xl shadow-lg border border-white/20">
+      <div className="mx-auto w-full max-w-4xl p-4 sm:p-6">
+        <div className="card">
           <div className="p-6">
             {team && (
               <>
@@ -229,10 +229,7 @@ const handleRemoveAdmin = async (userId) => {
                     <TabsContent value="people">
                       {isEditing && (
                         <div className="mb-4 flex justify-end">
-                          <button
-                            onClick={() => setIsModalOpen(true)}
-                            className="px-4 py-2 text-sm text-white bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                          >
+                          <button onClick={() => setIsModalOpen(true)} className="btn-brand">
                             Add Members
                           </button>
                         </div>
@@ -256,21 +253,20 @@ const handleRemoveAdmin = async (userId) => {
                           {members?.map((member) => (
                   <motion.div
                       key={member.user_id}
-                      className="bg-white shadow-sm p-4 rounded-lg flex justify-between items-center hover:shadow-md relative"
-                      
+                      className="card relative flex items-center justify-between p-4 card-hover"
                   >
                       <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
-                              <span className="text-lg font-bold text-gray-700">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-pink-500 text-white shadow-sm">
+                              <span className="text-sm font-bold">
                                   {member.first_name[0].toUpperCase()}
                                   {member.last_name[0].toUpperCase()}
                               </span>
                           </div>
                           <div>
-                              <p className="font-medium text-gray-900">
+                              <p className="font-semibold text-gray-900">
                                   {member.first_name} {member.last_name}
                               </p>
-                              <p className="text-sm text-gray-500">{member.role}</p>
+                              <span className={`chip mt-0.5 ${member.role === 'admin' ? 'bg-pink-50 text-pink-600' : 'bg-blue-50 text-blue-600'}`}>{member.role}</span>
                           </div>
                       </div>
                       {team.role === 'admin' && member.user_id !== currentUser.userId && isEditing && (
@@ -282,37 +278,33 @@ const handleRemoveAdmin = async (userId) => {
       <MoreHorizontal className="w-6 h-6" />
     </button>
     {activeDropdown === member.user_id && (
-      <div className="absolute right-0 mt-2 bg-white border shadow-lg rounded-md p-4 z-10 w-48">
+      <div className="absolute right-0 z-10 mt-2 w-48 overflow-hidden rounded-xl border border-gray-100 bg-white p-1 shadow-xl">
         {member.role === 'admin' ? (
           <>
-            {/* Remove Admin Option */}
             <button
               onClick={() => handleRemoveAdmin(member.user_id)}
-              className="block px-6 py-3 text-base text-gray-700 hover:bg-gray-100 rounded-lg w-full text-left"
+              className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
             >
               Remove Admin
             </button>
-            {/* Remove from Team Option */}
             <button
               onClick={() => handleRemoveMember(member.user_id)}
-              className="block px-6 py-3 text-base text-red-500 hover:bg-red-100 rounded-lg w-full text-left"
+              className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-500 transition-colors hover:bg-red-50"
             >
               Remove from Team
             </button>
           </>
         ) : (
           <>
-            {/* Make Admin Option */}
             <button
               onClick={() => handleMakeAdmin(member.user_id)}
-              className="block px-6 py-3 text-base text-gray-700 hover:bg-gray-100 rounded-lg w-full text-left"
+              className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
             >
               Make Admin
             </button>
-            {/* Remove from Team Option */}
             <button
               onClick={() => handleRemoveMember(member.user_id)}
-              className="block px-6 py-3 text-base text-red-500 hover:bg-red-100 rounded-lg w-full text-left"
+              className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-500 transition-colors hover:bg-red-50"
             >
               Remove from Team
             </button>
@@ -342,30 +334,31 @@ const handleRemoveAdmin = async (userId) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="modal-overlay"
         >
           <motion.div
-            initial={{ scale: 0.95 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0.95 }}
-            className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="modal-card"
           >
-            <h2 className="text-lg font-semibold mb-4 text-center">Add Team Members</h2>
-            <div className="space-y-4">
+            <h2 className="mb-1 text-lg font-bold text-gray-900">Add team members</h2>
+            <p className="mb-5 text-sm text-gray-500">Invite people by email. They must already have a Collabora account.</p>
+            <div className="space-y-3">
               {emails.map((email, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => handleEmailChange(index, e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    placeholder="Enter member's email"
+                    className="input-field"
+                    placeholder="name@example.com"
                     disabled={modalLoading}
                     required
                   />
                   <button
                     onClick={() => removeEmailField(index)}
-                    className="text-red-500 hover:text-red-600"
+                    className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
                   >
                     ✕
                   </button>
@@ -373,26 +366,18 @@ const handleRemoveAdmin = async (userId) => {
               ))}
               <button
                 onClick={addEmailField}
-                className="text-blue-500 hover:text-blue-600 text-sm"
+                className="text-sm font-semibold text-blue-600 transition-colors hover:text-blue-700"
               >
                 + Add another email
               </button>
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
-                  disabled={modalLoading}
-                >
+              <div className="flex justify-end gap-2 pt-2">
+                <button onClick={() => setIsModalOpen(false)} className="btn-ghost" disabled={modalLoading}>
                   Cancel
                 </button>
-                <button
-                  onClick={handleAddMembers}
-                  className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-md flex items-center gap-2 justify-center"
-                  disabled={modalLoading}
-                >
+                <button onClick={handleAddMembers} className="btn-brand" disabled={modalLoading}>
                   {modalLoading ? (
                     <>
-                      <div className="loader w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                       Please wait...
                     </>
                   ) : (

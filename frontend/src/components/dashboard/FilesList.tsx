@@ -53,9 +53,9 @@ export function FilesList() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">Recent Files</h2>
+    <div className="card overflow-hidden">
+      <div className="border-b border-gray-100 px-6 py-4">
+        <h2 className="text-lg font-bold text-gray-900">Recent Files</h2>
       </div>
       {loadingFiles ? (
         <div className="px-6 py-4 text-center text-gray-500">
@@ -82,22 +82,24 @@ export function FilesList() {
           <p className="mt-2">Loading files...</p>
         </div>
       ) : files.length === 0 ? (
-        <div className="col-span-full text-center py-12">
-          <Users className="mx-auto h-10 w-10 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No files</h3>
+        <div className="py-12 text-center">
+          <Users className="mx-auto h-10 w-10 text-gray-300" />
+          <h3 className="mt-2 text-sm font-semibold text-gray-900">No files</h3>
           <p className="mt-1 text-sm text-gray-500">Get started by uploading new files.</p>
         </div>
       ) : (
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-gray-100">
           {files.map((file) => (
             <div
               key={file.id}
-              className="px-6 py-4 hover:bg-gray-50 cursor-pointer"
+              className="cursor-pointer px-6 py-4 transition-colors hover:bg-blue-50/40"
               onClick={handleFileClick}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <File className="h-5 w-5 text-blue-500" />
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-500">
+                    <File className="h-5 w-5" />
+                  </span>
                   <div>
                     <p className="text-sm font-medium text-gray-900">{file.original_filename}</p>
                     <p className="text-xs text-gray-500">
